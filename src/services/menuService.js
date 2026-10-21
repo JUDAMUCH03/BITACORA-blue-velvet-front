@@ -101,19 +101,31 @@ export const menuService = {
    * @returns {Promise<Array<ReturnType<typeof MenuItemDTO>>>}
    */
   getMenuItems: async (categoria) => {
-    try {
-      const normalizedCat = normalizeCategory(categoria);
-      const isAll = !categoria || normalizedCat === 'todos';
+    const normalizedCat = normalizeCategory(categoria);
+    const isAll = !categoria || normalizedCat === 'todos';
 
-      const params = {};
-      if (!isAll) {
-        params.categoria = categoria;
+    try {
+      let rawData = [];
+      try {
+        const res = await api.get('/menu');
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          rawData = res.data;
+        }
+      } catch (err) {
+        try {
+          const resServ = await api.get('/servicios');
+          if (Array.isArray(resServ.data) && resServ.data.length > 0) {
+            rawData = resServ.data;
+          }
+        } catch (_) {}
       }
 
-      const response = await api.get('/servicios', { params });
-      const items = Array.isArray(response.data) ? response.data : [];
+      // Si el backend en la nube no tiene productos registrados o está en frío, activar catálogo demo
+      if (rawData.length === 0) {
+        rawData = FALLBACK_MENU_ITEMS;
+      }
 
-      const parsedItems = items.map((item) =>
+      const parsedItems = rawData.map((item) =>
         MenuItemDTO(
           item.id || item._id,
           item.nombre || item.name,
@@ -133,11 +145,10 @@ export const menuService = {
       return parsedItems;
     } catch (error) {
       console.warn(
-        `[menuService] Backend no disponible (${error.message}). Utilizando catálogo mock de alta cocina ($COP).`
+        `[menuService] Fallback resiliente activo (${error.message}). Utilizando catálogo mock ($COP).`
       );
 
-      const normalizedCat = normalizeCategory(categoria);
-      if (categoria && normalizedCat !== 'todos') {
+      if (!isAll) {
         return FALLBACK_MENU_ITEMS.filter((item) => {
           const itemCat = normalizeCategory(item.categoria);
           return (
@@ -158,8 +169,15 @@ export const menuService = {
    */
   getMenuItemById: async (id) => {
     try {
-      const response = await api.get(`/servicios/${id}`);
-      const item = response.data;
+      let item = null;
+      try {
+        const res = await api.get(`/menu/${id}`);
+        item = res.data;
+      } catch (e) {
+        const resServ = await api.get(`/servicios/${id}`);
+        item = resServ.data;
+      }
+
       return MenuItemDTO(
         item.id || item._id,
         item.nombre || item.name,

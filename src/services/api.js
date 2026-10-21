@@ -2,9 +2,11 @@ import axios from 'axios';
 
 /**
  * Constantes de configuración de la API y llaves de almacenamiento
+ * En producción (Vercel), utiliza '/api/v1' aprovechando el rewrite proxy de vercel.json hacia Azure.
  */
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.PROD ? '/api/v1' : 'http://localhost:8080/api/v1');
 
 export const TOKEN_STORAGE_KEY = 'blue_velvet_token';
 export const USER_STORAGE_KEY = 'blue_velvet_user';
@@ -14,7 +16,7 @@ export const USER_STORAGE_KEY = 'blue_velvet_user';
  */
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 8000,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -72,9 +74,9 @@ api.interceptors.response.use(
       normalizedError.data = data;
       return Promise.reject(normalizedError);
     } else if (error.request) {
-      // La petición fue realizada pero no se recibió respuesta (Servidor apagado o error de red)
+      // Petición realizada pero sin respuesta (timeout, servidor apagado o falla de red)
       const networkError = new Error(
-        'No se pudo establecer conexión con el servidor de Blue Velvet. Verifica que el backend esté activo.'
+        'No se pudo establecer conexión con el backend de Blue Velvet o se agotó el tiempo de espera.'
       );
       networkError.isNetworkError = true;
       return Promise.reject(networkError);
