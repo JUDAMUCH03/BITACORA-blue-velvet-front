@@ -50,11 +50,11 @@ export default function LoginPage() {
     setServerError('');
 
     try {
-      await login(correo.trim(), password);
+      const authData = await login(correo.trim(), password);
       setSuccess(true);
-      // Redirección automática a '/menu' tras autenticación exitosa según requerimiento
+      const isStaff = ['ROLE_ADMIN', 'ROLE_CHEF', 'ROLE_BARTENDER', 'ROLE_MESERO'].includes(authData?.rol);
       setTimeout(() => {
-        navigate('/menu');
+        navigate(isStaff ? '/operacion' : '/menu');
       }, 600);
     } catch (err) {
       console.warn('[LoginPage] Error al autenticar:', err);
@@ -70,11 +70,11 @@ export default function LoginPage() {
     setValidationError('');
     setServerError('');
     if (role === 'admin') {
-      setCorreo('admin@bluevelvet.rest');
-      setPassword('AdminPass2026!');
+      setCorreo('admin@bluevelvet.com');
+      setPassword('admin123');
     } else {
-      setCorreo('cliente.vip@gmail.com');
-      setPassword('ClientePass2026!');
+      setCorreo('cliente@bluevelvet.com');
+      setPassword('cliente123');
     }
   };
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   GlassWater,
   LayoutGrid,
@@ -7,12 +8,12 @@ import {
   Wine,
   Search,
   Bell,
-  ChevronDown,
-  UserCheck,
+  LogOut,
   Shield,
   Sparkles,
 } from 'lucide-react';
 import { useBlueVelvet } from '../../context/BlueVelvetContext';
+import { useAuth } from '../../context/AuthContext';
 import { ROLES_USUARIO } from '../../types/dominio';
 import LogoBlueVelvet from './LogoBlueVelvet';
 
@@ -27,7 +28,7 @@ export const MODULOS_SISTEMA = {
 /**
  * Shell Operativo Principal de Blue Velvet — Coctelería de Autor
  * Implementa barra lateral fija en escritorio, navegación inferior en móvil,
- * cabecera translúcida con selector RBAC y atmósfera nocturna.
+ * cabecera translúcida con insignia RBAC legítima de solo lectura (JWT) y atmósfera nocturna.
  */
 export default function OperacionLayout({
   moduloActivo,
@@ -38,12 +39,17 @@ export default function OperacionLayout({
 }) {
   const {
     rolActivo,
-    setRolActivo,
     comandasActivasKDSCount,
     alertaFlotante,
   } = useBlueVelvet();
 
-  const [mostrarDropdownRol, setMostrarDropdownRol] = useState(false);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const itemsNavegacion = [
     {
@@ -210,7 +216,7 @@ export default function OperacionLayout({
           </div>
         </div>
 
-        {/* Acciones de Cabecera: Notificaciones y Selector de Rol RBAC */}
+        {/* Acciones de Cabecera: Notificaciones y Credenciales de Usuario (Solo Lectura) */}
         <div className="flex items-center gap-3.5 ml-auto">
           {/* Botón de Notificaciones de Barra */}
           <button
@@ -228,79 +234,39 @@ export default function OperacionLayout({
             )}
           </button>
 
-          {/* Selector de Roles RBAC */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setMostrarDropdownRol(!mostrarDropdownRol)}
-              className="flex items-center gap-2.5 p-1.5 sm:px-3 sm:py-2 rounded-xl bg-superficie-profunda border border-borde hover:border-oro/50 transition-colors"
-              aria-expanded={mostrarDropdownRol}
-              aria-label="Cambiar rol operativo"
-            >
-              {/* Avatar con iniciales o icono */}
+          {/* Bloque Informativo de Sesión y Rol (Solo Lectura - JWT RBAC) */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-superficie-profunda border border-borde">
+              {/* Avatar con inicial */}
               <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#1E293B] to-noche border border-oro/40 flex items-center justify-center text-oro text-xs font-bold font-serif shadow-sm">
-                {infoRolActual.nombre.charAt(0)}
+                {(user?.nombre || user?.email || user?.correo || 'U').charAt(0).toUpperCase()}
               </div>
 
-              {/* Datos de Rol en escritorio */}
+              {/* Identidad y Rol Legítimo extraído del JWT */}
               <div className="hidden sm:flex flex-col text-left">
                 <span className="text-xs font-semibold text-texto leading-none">
-                  {infoRolActual.nombre}
+                  {user?.email || user?.correo || 'Usuario'}
                 </span>
-                <span className="text-[10px] text-champan font-mono mt-0.5">
-                  {rolActivo}
+                <span className="text-[10px] text-champan font-mono mt-0.5 flex items-center gap-1.5">
+                  <span>{infoRolActual.nombre}</span>
+                  <span className="text-texto-tenue">·</span>
+                  <span className="px-1.5 py-0.5 rounded bg-oro/15 border border-oro/30 text-oro font-bold text-[9px]">
+                    {rolActivo}
+                  </span>
                 </span>
               </div>
+            </div>
 
-              <ChevronDown className="w-3.5 h-3.5 text-texto-tenue ml-1" />
+            {/* Botón de Cierre de Sesión Seguro */}
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Cerrar sesión"
+              className="p-2 sm:px-3 sm:py-2 rounded-xl bg-superficie-profunda border border-borde text-texto-secundario hover:text-carmesi hover:border-carmesi/40 transition-colors flex items-center gap-1.5 text-xs font-semibold"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Cerrar Sesión</span>
             </button>
-
-            {/* Menú Desplegable de Roles RBAC */}
-            {mostrarDropdownRol && (
-              <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl bg-[#0F172A] border border-[#2D3A52] shadow-2xl p-2 z-50 animate-fadeIn">
-                <div className="px-3 py-2 border-b border-white/5 mb-1.5">
-                  <p className="text-[10px] uppercase tracking-wider text-oro font-bold">
-                    Control de Permisos RBAC
-                  </p>
-                  <p className="text-[11px] text-texto-secundario mt-0.5">
-                    Selecciona el perfil de acceso
-                  </p>
-                </div>
-
-                <div className="space-y-1">
-                  {Object.values(ROLES_USUARIO).map((rol) => {
-                    const esSeleccionado = rolActivo === rol.id;
-                    return (
-                      <button
-                        key={rol.id}
-                        type="button"
-                        onClick={() => {
-                          setRolActivo(rol.id);
-                          setMostrarDropdownRol(false);
-                        }}
-                        className={`w-full flex items-start gap-2.5 p-2.5 rounded-xl text-left transition-colors ${
-                          esSeleccionado
-                            ? 'bg-oro/10 border border-oro/40 text-champan'
-                            : 'hover:bg-white/5 text-texto'
-                        }`}
-                      >
-                        <Shield
-                          className={`w-4 h-4 mt-0.5 shrink-0 ${
-                            esSeleccionado ? 'text-oro' : 'text-texto-tenue'
-                          }`}
-                        />
-                        <div>
-                          <p className="text-xs font-bold">{rol.nombre}</p>
-                          <p className="text-[10px] text-texto-secundario leading-snug">
-                            {rol.descripcion}
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </header>
