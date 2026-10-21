@@ -12,17 +12,37 @@ export const authService = {
    */
   login: async (loginRequestDTO) => {
     try {
+      const emailValue = loginRequestDTO.email || loginRequestDTO.correo;
       const response = await api.post('/auth/login', {
-        correo: loginRequestDTO.correo,
+        email: emailValue,
+        correo: emailValue,
         password: loginRequestDTO.password,
       });
 
       const data = response.data;
+      const rawToken = data.token || data.accessToken || data.jwt;
+      let userRole = data.rol || data.role;
+      let userEmail = data.correo || data.email || emailValue;
+
+      // Si el backend responde { token: "..." }, decodificar claims ("rol", "roles", "sub") del JWT
+      if (!userRole && rawToken && rawToken.includes('.')) {
+        try {
+          const payloadBase64 = rawToken.split('.')[1];
+          const decodedPayload = JSON.parse(atob(payloadBase64));
+          userRole = decodedPayload.rol || (Array.isArray(decodedPayload.roles) ? decodedPayload.roles[0] : null);
+          if (decodedPayload.sub) {
+            userEmail = decodedPayload.sub;
+          }
+        } catch (e) {
+          console.warn('[authService] No se pudo extraer claims del JWT:', e);
+        }
+      }
+
       const authData = AuthResponseDTO(
-        data.token || data.accessToken || data.jwt,
-        data.rol || data.role || 'CLIENTE',
-        data.correo || data.email || loginRequestDTO.correo,
-        data.nombre || data.name || loginRequestDTO.correo.split('@')[0]
+        rawToken,
+        userRole || 'ROLE_CLIENTE',
+        userEmail,
+        data.nombre || data.name || userEmail.split('@')[0]
       );
 
       localStorage.setItem(TOKEN_STORAGE_KEY, authData.token);
