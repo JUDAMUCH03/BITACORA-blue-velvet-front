@@ -1,0 +1,273 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Fondos y Superficies Nocturnas */
+  --color-noche: #080D19;               /* Fondo base de la aplicación (azul marino ultraconcentrado) */
+  --color-panel: #0F172A;               /* Fondo de paneles y tarjetas */
+  --color-superficie: #172033;          /* Superficies elevadas */
+  --color-superficie-profunda: #0D1525; /* Fondo de controles, inputs e interiores */
+  --color-borde: #263247;               /* Bordes base */
+  --color-borde-tenue: rgba(153, 168, 194, 0.2);
+  /* Acentos de Lujo (Uso con moderación) */
+  --color-oro: #D4AF37;                 /* Acciones primarias, cejas, selección activa, bordes premium */
+  --color-champan: #F3D57B;             /* Resaltados de navegación y textos de acento */
+  /* Tipografía */
+  --color-texto: #F7F5EE;               /* Texto principal aperlado */
+  --color-texto-secundario: #9AA5B7;    /* Descripciones y metadatos */
+  --color-texto-tenue: #657187;         /* Microtextos y estados desactivados */
+  /* Estados Semánticos Operativos */
+  --color-esmeralda: #34D399;           /* Disponible, éxito, mesa libre, verificado */
+  --color-esmeralda-claro: #6EE7B7;
+  --color-carmesi: #FB7185;             /* Agotado, error, cancelación, destructivo */
+  --color-carmesi-claro: #FDA4AF;
+  --color-ambar: #F59E0B;               /* En preparación, advertencia, demora */
+  --color-azul: #60A5FA;                /* Pedido recibido, información inicial */
+}
+
+@layer base {
+  body {
+    background-color: var(--color-noche);
+    color: var(--color-texto);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', serif;
+    letter-spacing: -0.02em;
+    color: var(--color-texto);
+  }
+
+  /* Foco accesible visible en dorado */
+  :focus-visible {
+    outline: 2px solid #D4AF37 !important;
+    outline-offset: 2px !important;
+  }
+}
+
+@layer utilities {
+  /* Capa de atmósfera nocturna de fondo */
+  .fondo-atmosfera {
+    background: 
+      radial-gradient(circle at 78% 16%, rgba(212, 175, 55, 0.11), transparent 25%),
+      repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 5px),
+      linear-gradient(90deg, rgba(8, 13, 25, 0.98) 0%, rgba(8, 13, 25, 0.93) 42%, rgba(8, 13, 25, 0.85) 100%),
+      url('https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=1920&q=80') center / cover no-repeat fixed;
+  }
+
+  /* Panel con Efecto Glassmorphism Nocturno */
+  .panel-glass {
+    background: rgba(13, 21, 37, 0.88);
+    border: 1px solid #263247;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    box-shadow: 0 24px 55px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Control interior profundo */
+  .control-profundo {
+    background: #0D1525;
+    border: 1px solid #263247;
+  }
+
+  /* Tarjeta de producto con bordes asimétricos */
+  .tarjeta-asimetrica {
+    border-radius: 4px 18px 4px 18px;
+    background: rgba(14, 23, 40, 0.9);
+    border: 1px solid rgba(153, 168, 194, 0.2);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.08);
+  }
+
+  /* Monograma decorativo BV */
+  .monograma-bv {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(212, 175, 55, 0.08);
+    transform: rotate(-8deg);
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* Botón Primario de Lujo */
+  .btn-primario {
+    min-height: 44px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #F3D57B, #C99D24);
+    color: #101625;
+    box-shadow: 0 6px 22px rgba(212, 175, 55, 0.14);
+    transition: all 200ms ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 18px;
+  }
+  .btn-primario:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 26px rgba(212, 175, 55, 0.24);
+    filter: brightness(1.05);
+  }
+  .btn-primario:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  .btn-primario:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Botón Secundario */
+  .btn-secundario {
+    min-height: 44px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    background: rgba(212, 175, 55, 0.06);
+    color: #EBD88F;
+    border: 1px solid rgba(212, 175, 55, 0.28);
+    transition: all 200ms ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 18px;
+  }
+  .btn-secundario:hover:not(:disabled) {
+    background: rgba(212, 175, 55, 0.12);
+    border-color: rgba(212, 175, 55, 0.5);
+  }
+
+  /* Botón Destructivo */
+  .btn-destructivo {
+    min-height: 44px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    background: rgba(244, 63, 94, 0.08);
+    color: #FB7185;
+    border: 1px solid rgba(244, 63, 94, 0.2);
+    transition: all 200ms ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 18px;
+  }
+  .btn-destructivo:hover:not(:disabled) {
+    background: rgba(244, 63, 94, 0.16);
+    border-color: rgba(244, 63, 94, 0.4);
+  }
+
+  /* Botón Neutral */
+  .btn-neutral {
+    min-height: 44px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    background: transparent;
+    color: #657187;
+    border: 1px solid #263247;
+    transition: all 200ms ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 18px;
+  }
+  .btn-neutral:hover:not(:disabled) {
+    color: #9AA5B7;
+    border-color: #354158;
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  /* Insignias */
+  .insignia-verde {
+    border-radius: 20px;
+    padding: 6px 9px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #6EE7B7;
+    background: rgba(6, 78, 59, 0.7);
+    border: 1px solid rgba(52, 211, 153, 0.28);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .insignia-carmesi {
+    border-radius: 20px;
+    padding: 6px 9px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #FDA4AF;
+    background: rgba(76, 5, 25, 0.75);
+    border: 1px solid rgba(251, 113, 133, 0.25);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .insignia-dorada {
+    border-radius: 20px;
+    padding: 6px 9px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #F3D57B;
+    background: rgba(212, 175, 55, 0.08);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .insignia-azul {
+    border-radius: 20px;
+    padding: 6px 9px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #93C5FD;
+    background: rgba(30, 58, 138, 0.6);
+    border: 1px solid rgba(96, 165, 250, 0.3);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+/* Scrollbar refinada */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #080D19;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #263247;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #D4AF37;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
