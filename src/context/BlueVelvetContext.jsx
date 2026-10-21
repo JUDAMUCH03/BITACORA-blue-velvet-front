@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import api from '../services/api';
+import { useAuth } from './AuthContext';
 import {
   CATEGORIAS_BEBIDA,
   ESTADOS_PEDIDO,
@@ -11,7 +13,7 @@ import {
 const BlueVelvetContext = createContext(null);
 
 // =========================================================================
-// DATOS SEMILLA DE ALTA FIDELIDAD (SERVICIO NOCTURNO BLUE VELVET)
+// DATOS SEMILLA DE ALTA FIDELIDAD PARA CONTINGENCIA / MODO OFFLINE
 // =========================================================================
 
 const PLATOS_INICIALES = [
@@ -128,7 +130,7 @@ const PLATOS_INICIALES = [
     graduacionAlcoholica: 0.0,
     notasSensoriales: ['Floral balsámico', 'Picante tenue', 'Acidez brillante'],
     cristaleria: 'Vaso bajo con esfera de hielo',
-    disponible: false, // Demostración de producto agotado
+    disponible: false,
     imagenUrl: 'https://images.unsplash.com/photo-1587888637140-849b25d80ef9?auto=format&fit=crop&w=800&q=80',
     esAlcoholico: false,
   },
@@ -206,44 +208,6 @@ const PEDIDOS_KDS_INICIALES = [
       },
     ],
   },
-  {
-    id: 100,
-    idMesa: 1,
-    numeroMesa: 1,
-    estado: ESTADOS_PEDIDO.LISTO,
-    timestamp: new Date(Date.now() - 18 * 60000).toISOString(),
-    items: [
-      {
-        id: 200,
-        idPlato: 4,
-        nombrePlato: 'Macallan 12 Double Cask',
-        precioCongelado: 72000,
-        cantidad: 1,
-        spiritBrandId: null,
-        nombreDestilado: 'Servicio directo',
-        spiritModificationsCount: 0,
-        garnishes: [],
-      },
-    ],
-  },
-  {
-    id: 99,
-    idMesa: 5,
-    numeroMesa: 5,
-    estado: ESTADOS_PEDIDO.ENTREGADO,
-    timestamp: new Date(Date.now() - 32 * 60000).toISOString(),
-    items: [
-      {
-        id: 199,
-        idPlato: 8,
-        nombrePlato: 'Jardín Nocturno',
-        precioCongelado: 36000,
-        cantidad: 1,
-        spiritModificationsCount: 0,
-        garnishes: ['Piel de pomelo ruby'],
-      },
-    ],
-  },
 ];
 
 const AUDITORIA_INICIAL = [
@@ -252,71 +216,24 @@ const AUDITORIA_INICIAL = [
     tipoEvento: 'INICIO_SERVICIO',
     entidadId: 'SISTEMA',
     usuario: 'Staff Operativo',
-    detalles: 'Apertura de turno: Servicio Nocturno · Blue Velvet activo',
-    fecha: new Date(Date.now() - 45 * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-  },
-  {
-    id: 'evt-02',
-    tipoEvento: 'STOCK_MUTADO',
-    entidadId: 'PLATO-9',
-    usuario: 'Mixólogo Jefe',
-    detalles: 'Producto Infusión de Lavanda Silvestre marcado como Agotado en barra',
-    fecha: new Date(Date.now() - 38 * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-  },
-  {
-    id: 'evt-03',
-    tipoEvento: 'COMANDA_ENVIADA',
-    entidadId: 'PEDIDO-101',
-    usuario: 'Mesero Principal',
-    detalles: 'Nueva comanda despachada a barra para Mesa 2 (2 bebidas)',
-    fecha: new Date(Date.now() - 12 * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-  },
-  {
-    id: 'evt-04',
-    tipoEvento: 'KDS_MUTACION',
-    entidadId: 'PEDIDO-101',
-    usuario: 'Barman',
-    detalles: 'Comanda #101 avanzó a EN PREPARACIÓN · Estado inmutable',
-    fecha: new Date(Date.now() - 11 * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-  },
-  {
-    id: 'evt-05',
-    tipoEvento: 'COMANDA_ENVIADA',
-    entidadId: 'PEDIDO-102',
-    usuario: 'Mesero Principal',
-    detalles: 'Nueva comanda despachada a barra para Mesa 4 (2 bebidas)',
-    fecha: new Date(Date.now() - 4 * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    detalle: 'Apertura de turno: Servicio Nocturno · Blue Velvet activo',
+    timestamp: new Date(Date.now() - 45 * 60000).toISOString(),
   },
 ];
 
 export function BlueVelvetProvider({ children }) {
+  // 1. Vinculación estricta con AuthContext (RBAC Criptográfico JWT)
+  const { user } = useAuth();
+  const rolActivo = user?.rol || 'ROLE_CLIENTE';
+
   const [platos, setPlatos] = useState(PLATOS_INICIALES);
   const [mesas, setMesas] = useState(MESAS_INICIALES);
   const [pedidos, setPedidos] = useState(PEDIDOS_KDS_INICIALES);
   const [eventosAuditoria, setEventosAuditoria] = useState(AUDITORIA_INICIAL);
-  const [rolActivo, setRolActivo] = useState(ROLES_USUARIO.ROLE_ADMIN.id);
   const [mesaSeleccionadaId, setMesaSeleccionadaId] = useState(2);
   const [alertaFlotante, setAlertaFlotante] = useState(null);
-
-  // Borrador de comanda temporal para la mesa seleccionada
   const [comandasBorrador, setComandasBorrador] = useState({});
-
-  /**
-   * Registro en el log de auditoría (espejo MongoDB eventos_restaurante)
-   */
-  const registrarAuditoria = useCallback((tipoEvento, entidadId, detalles) => {
-    const usuarioNombre = ROLES_USUARIO[rolActivo]?.nombre || 'Operador';
-    const nuevoEvento = {
-      id: `evt-${Date.now()}`,
-      tipoEvento,
-      entidadId: String(entidadId),
-      usuario: usuarioNombre,
-      detalles,
-      fecha: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-    };
-
-    setEventosAuditoria((prev) => [nuevoEvento, ...prev.slice(0, 49)]);
-  }, [rolActivo]);
+  const [cargandoInicial, setCargandoInicial] = useState(true);
 
   /**
    * Notificación flotante de dominio
@@ -329,7 +246,52 @@ export function BlueVelvetProvider({ children }) {
   }, []);
 
   /**
-   * Selección interactiva de mesa con validación de comanda única
+   * Carga Inicial en Paralelo desde el Backend Spring Boot 3
+   */
+  const cargarDatosIniciales = useCallback(async () => {
+    setCargandoInicial(true);
+    try {
+      const [resMenu, resMesas, resPedidos] = await Promise.allSettled([
+        api.get('/menu'),
+        api.get('/mesas'),
+        api.get('/pedidos'),
+      ]);
+
+      if (resMenu.status === 'fulfilled' && Array.isArray(resMenu.value.data) && resMenu.value.data.length > 0) {
+        setPlatos(resMenu.value.data);
+      }
+
+      if (resMesas.status === 'fulfilled' && Array.isArray(resMesas.value.data) && resMesas.value.data.length > 0) {
+        setMesas(resMesas.value.data);
+      }
+
+      if (resPedidos.status === 'fulfilled' && Array.isArray(resPedidos.value.data) && resPedidos.value.data.length > 0) {
+        setPedidos(resPedidos.value.data);
+      }
+
+      // Si es rol ADMIN, consultar eventos de auditoría en MongoDB
+      if (rolActivo === 'ROLE_ADMIN') {
+        try {
+          const resAudit = await api.get('/auditoria');
+          if (Array.isArray(resAudit.data) && resAudit.data.length > 0) {
+            setEventosAuditoria(resAudit.data);
+          }
+        } catch (_) {}
+      }
+    } catch (err) {
+      console.warn('[BlueVelvetContext] Conexión en modo contingencia:', err);
+      dispararAlerta('Modo fuera de línea · Operando con datos locales de contingencia', 'ambar');
+    } finally {
+      setCargandoInicial(false);
+    }
+  }, [rolActivo, dispararAlerta]);
+
+  useEffect(() => {
+    cargarDatosIniciales();
+  }, [cargarDatosIniciales]);
+
+  /**
+   * Selección de mesa con validación de comanda única
    */
   const seleccionarMesa = useCallback((mesaId) => {
     const mesa = mesas.find((m) => m.id === mesaId);
@@ -343,7 +305,7 @@ export function BlueVelvetProvider({ children }) {
   }, [mesas, dispararAlerta]);
 
   /**
-   * Agregar cóctel personalizado al borrador de la comanda de una mesa
+   * Agregar cóctel personalizado al borrador de la mesa
    */
   const agregarItemAComanda = useCallback((mesaId, itemData) => {
     setComandasBorrador((prev) => {
@@ -364,17 +326,8 @@ export function BlueVelvetProvider({ children }) {
         [mesaId]: [...itemsActuales, nuevoItem],
       };
     });
+  }, []);
 
-    registrarAuditoria(
-      'ITEM_AGREGADO_BORRADOR',
-      `MESA-${mesaId}`,
-      `Bebida ${itemData.nombrePlato} preparada para agregar a Mesa ${mesaId}`
-    );
-  }, [registrarAuditoria]);
-
-  /**
-   * Eliminar ítem del borrador de la mesa
-   */
   const removerItemDeComanda = useCallback((mesaId, itemId) => {
     setComandasBorrador((prev) => ({
       ...prev,
@@ -383,15 +336,16 @@ export function BlueVelvetProvider({ children }) {
   }, []);
 
   /**
-   * Despacha la comanda activa a la barra (KDS) en estado RECIBIDO
+   * 1. DESPACHO REAL DE COMANDAS (Sala ➔ Backend Spring Boot POST /pedidos)
    */
-  const enviarComandaABarra = useCallback((mesaId) => {
+  const enviarComandaABarra = useCallback(async (mesaId) => {
     const mesa = mesas.find((m) => m.id === mesaId);
     if (!mesa) return;
 
-    // Verificar si ya tiene comanda abierta para no violar la invariante de 1 comanda por mesa
     if (mesa.estado === ESTADOS_MESA.OCUPADA && mesa.comandaActivaId) {
-      const pedidoExistente = pedidos.find((p) => p.id === mesa.comandaActivaId && p.estado !== ESTADOS_PEDIDO.ENTREGADO);
+      const pedidoExistente = pedidos.find(
+        (p) => p.id === mesa.comandaActivaId && p.estado !== ESTADOS_PEDIDO.ENTREGADO
+      );
       if (pedidoExistente) {
         dispararAlerta(`La mesa ${mesa.numero} ya cuenta con comanda #${pedidoExistente.id} abierta en servicio.`, 'carmesi');
         return;
@@ -404,86 +358,103 @@ export function BlueVelvetProvider({ children }) {
       return;
     }
 
-    const nuevoPedidoId = Math.floor(100 + Math.random() * 900);
-    const nuevoPedido = {
-      id: nuevoPedidoId,
-      idMesa: mesa.id,
-      numeroMesa: mesa.numero,
-      estado: ESTADOS_PEDIDO.RECIBIDO,
-      timestamp: new Date().toISOString(),
-      items: [...itemsBorrador],
+    const payload = {
+      idMesa: Number(mesaId),
+      items: itemsBorrador.map((it) => ({
+        idPlato: Number(it.idPlato || it.id),
+        cantidad: Number(it.cantidad || 1),
+        spiritBrandId: it.spiritBrandId ? Number(it.spiritBrandId) : null,
+        garnishes: Array.isArray(it.garnishes) ? it.garnishes.slice(0, 2) : [],
+      })),
     };
 
-    // Marcar mesa como ocupada y enlazar la comanda
-    setMesas((prev) =>
-      prev.map((m) =>
-        m.id === mesaId
-          ? { ...m, estado: ESTADOS_MESA.OCUPADA, cuentaAbierta: true, comandaActivaId: nuevoPedidoId }
-          : m
-      )
-    );
+    try {
+      const response = await api.post('/pedidos', payload);
+      const pedidoCreado = response.data;
 
-    // Agregar comanda al KDS
-    setPedidos((prev) => [nuevoPedido, ...prev]);
+      setPedidos((prev) => [pedidoCreado, ...prev]);
+      setMesas((prev) =>
+        prev.map((m) =>
+          m.id === mesaId
+            ? { ...m, estado: ESTADOS_MESA.OCUPADA, cuentaAbierta: true, comandaActivaId: pedidoCreado.id }
+            : m
+        )
+      );
 
-    // Limpiar borrador
-    setComandasBorrador((prev) => {
-      const copia = { ...prev };
-      delete copia[mesaId];
-      return copia;
-    });
+      setComandasBorrador((prev) => {
+        const copia = { ...prev };
+        delete copia[mesaId];
+        return copia;
+      });
 
-    registrarAuditoria(
-      'COMANDA_ENVIADA_BARRA',
-      `PEDIDO-${nuevoPedidoId}`,
-      `Nueva comanda enviada a barra (Mesa ${mesa.numero}) · ${itemsBorrador.length} bebidas`
-    );
+      dispararAlerta(`Comanda #${pedidoCreado.id} despachada a barra y persistida en BD.`, 'esmeralda');
+    } catch (err) {
+      console.warn('[BlueVelvetContext] Fallback al persistir comanda:', err);
+      // Fallback local en caso de desconexión
+      const nuevoPedidoId = Math.floor(100 + Math.random() * 900);
+      const nuevoPedido = {
+        id: nuevoPedidoId,
+        idMesa: mesa.id,
+        numeroMesa: mesa.numero,
+        estado: ESTADOS_PEDIDO.RECIBIDO,
+        timestamp: new Date().toISOString(),
+        items: [...itemsBorrador],
+      };
 
-    dispararAlerta(`Comanda #${nuevoPedidoId} enviada a barra exitosamente.`, 'esmeralda');
-  }, [mesas, pedidos, comandasBorrador, registrarAuditoria, dispararAlerta]);
+      setPedidos((prev) => [nuevoPedido, ...prev]);
+      setMesas((prev) =>
+        prev.map((m) =>
+          m.id === mesaId
+            ? { ...m, estado: ESTADOS_MESA.OCUPADA, cuentaAbierta: true, comandaActivaId: nuevoPedidoId }
+            : m
+        )
+      );
 
-  /**
-   * Avance unidireccional de comandas en el KDS de Barra:
-   * RECIBIDO -> EN_PREPARACION -> LISTO -> ENTREGADO
-   */
-  const avanzarEstadoPedido = useCallback((pedidoId) => {
-    setPedidos((prev) =>
-      prev.map((ped) => {
-        if (ped.id !== pedidoId) return ped;
+      setComandasBorrador((prev) => {
+        const copia = { ...prev };
+        delete copia[mesaId];
+        return copia;
+      });
 
-        let siguienteEstado = ped.estado;
-        if (ped.estado === ESTADOS_PEDIDO.RECIBIDO) {
-          siguienteEstado = ESTADOS_PEDIDO.EN_PREPARACION;
-          registrarAuditoria(
-            'KDS_EN_PREPARACION',
-            `PEDIDO-${pedidoId}`,
-            `Comanda #${pedidoId} (Mesa ${ped.numeroMesa}) pasó a EN PREPARACIÓN · Inmutable`
-          );
-        } else if (ped.estado === ESTADOS_PEDIDO.EN_PREPARACION) {
-          siguienteEstado = ESTADOS_PEDIDO.LISTO;
-          registrarAuditoria(
-            'KDS_LISTO',
-            `PEDIDO-${pedidoId}`,
-            `Comanda #${pedidoId} marcada como LISTA para entrega en barra`
-          );
-        } else if (ped.estado === ESTADOS_PEDIDO.LISTO) {
-          siguienteEstado = ESTADOS_PEDIDO.ENTREGADO;
-          registrarAuditoria(
-            'KDS_ENTREGADO',
-            `PEDIDO-${pedidoId}`,
-            `Comanda #${pedidoId} entregada a sala para el servicio de Mesa ${ped.numeroMesa}`
-          );
-        }
-
-        return { ...ped, estado: siguienteEstado };
-      })
-    );
-  }, [registrarAuditoria]);
+      dispararAlerta(`Comanda #${nuevoPedidoId} enviada a barra (Modo local).`, 'ambar');
+    }
+  }, [mesas, pedidos, comandasBorrador, dispararAlerta]);
 
   /**
-   * Mutar destilado base (Solo permitido en RECIBIDO y máx 1 vez)
+   * 2. AVANCE UNIDIRECCIONAL KDS REAL (Barra ➔ Backend PATCH /pedidos/{id}/estado)
    */
-  const mutarDestiladoBase = useCallback((pedidoId, itemId, nuevoDestiladoId) => {
+  const avanzarEstadoPedido = useCallback(async (pedidoId) => {
+    const ped = pedidos.find((p) => p.id === pedidoId);
+    if (!ped) return;
+
+    let siguienteEstado = ped.estado;
+    if (ped.estado === ESTADOS_PEDIDO.RECIBIDO) {
+      siguienteEstado = ESTADOS_PEDIDO.EN_PREPARACION;
+    } else if (ped.estado === ESTADOS_PEDIDO.EN_PREPARACION) {
+      siguienteEstado = ESTADOS_PEDIDO.LISTO;
+    } else if (ped.estado === ESTADOS_PEDIDO.LISTO) {
+      siguienteEstado = ESTADOS_PEDIDO.ENTREGADO;
+    } else {
+      return;
+    }
+
+    try {
+      const response = await api.patch(`/pedidos/${pedidoId}/estado`, { nuevoEstado: siguienteEstado });
+      setPedidos((prev) => prev.map((p) => (p.id === pedidoId ? response.data : p)));
+      dispararAlerta(`Comanda #${pedidoId} avanzó a ${siguienteEstado} (Persistido en KDS).`, 'esmeralda');
+    } catch (err) {
+      console.warn('[BlueVelvetContext] Fallback al avanzar estado KDS:', err);
+      setPedidos((prev) =>
+        prev.map((p) => (p.id === pedidoId ? { ...p, estado: siguienteEstado } : p))
+      );
+      dispararAlerta(`Comanda #${pedidoId} avanzó a ${siguienteEstado} (Modo local).`, 'ambar');
+    }
+  }, [pedidos, dispararAlerta]);
+
+  /**
+   * 3. MUTACIÓN DE DESTILADOS REAL (Barra/Sala ➔ Backend PATCH /pedidos/{id}/items/{itemId}/destilado)
+   */
+  const mutarDestiladoBase = useCallback(async (pedidoId, itemId, nuevoDestiladoId, motivo = 'Preferencia del cliente') => {
     const pedido = pedidos.find((p) => p.id === pedidoId);
     if (!pedido) return;
 
@@ -500,169 +471,150 @@ export function BlueVelvetProvider({ children }) {
     const destiladoObj = DESTILADOS_BASE_CATALOGO.find((d) => d.id === nuevoDestiladoId);
     if (!destiladoObj) return;
 
-    setPedidos((prev) =>
-      prev.map((ped) => {
-        if (ped.id !== pedidoId) return ped;
-
-        const itemsActualizados = ped.items.map((it) => {
-          if (it.id !== itemId) return it;
-          if (it.spiritModificationsCount >= 1) {
-            dispararAlerta('El destilado base ya ha sido modificado el máximo de 1 vez permitida.', 'ambar');
-            return it;
-          }
-          return {
-            ...it,
-            spiritBrandId: destiladoObj.id,
-            nombreDestilado: destiladoObj.nombre,
-            spiritModificationsCount: it.spiritModificationsCount + 1,
-          };
-        });
-
-        return { ...ped, items: itemsActualizados };
-      })
-    );
-
-    registrarAuditoria(
-      'DESTILADO_MUTADO',
-      `PEDIDO-${pedidoId}`,
-      `Destilado base mutado a ${destiladoObj.nombre} en Comanda #${pedidoId}`
-    );
-
-    dispararAlerta(`Destilado actualizado a ${destiladoObj.nombre} en la comanda.`, 'esmeralda');
-  }, [pedidos, registrarAuditoria, dispararAlerta]);
+    try {
+      const response = await api.patch(`/pedidos/${pedidoId}/items/${itemId}/destilado`, {
+        nuevoSpiritBrandId: Number(nuevoDestiladoId),
+        motivo: motivo || 'Preferencia del cliente',
+      });
+      setPedidos((prev) => prev.map((p) => (p.id === pedidoId ? response.data : p)));
+      dispararAlerta(`Destilado mutado a ${destiladoObj.nombre} (Persistido en PostgreSQL / MongoDB).`, 'esmeralda');
+    } catch (err) {
+      console.warn('[BlueVelvetContext] Fallback al mutar destilado:', err);
+      setPedidos((prev) =>
+        prev.map((ped) => {
+          if (ped.id !== pedidoId) return ped;
+          const itemsActualizados = ped.items.map((it) => {
+            if (it.id !== itemId) return it;
+            return {
+              ...it,
+              spiritBrandId: destiladoObj.id,
+              nombreDestilado: destiladoObj.nombre,
+              spiritModificationsCount: (it.spiritModificationsCount || 0) + 1,
+            };
+          });
+          return { ...ped, items: itemsActualizados };
+        })
+      );
+      dispararAlerta(`Destilado actualizado a ${destiladoObj.nombre} (Modo local).`, 'ambar');
+    }
+  }, [pedidos, dispararAlerta]);
 
   /**
-   * Cancelar comanda (Solo permitida en estado RECIBIDO)
+   * Cancelar comanda
    */
-  const cancelarComanda = useCallback((pedidoId) => {
+  const cancelarComanda = useCallback(async (pedidoId) => {
     const pedido = pedidos.find((p) => p.id === pedidoId);
     if (!pedido) return;
 
-    if (pedido.estado === ESTADOS_PEDIDO.EN_PREPARACION) {
-      dispararAlerta('Invariante violada (HTTP 422): No se puede cancelar una comanda que ya está en preparación.', 'carmesi');
-      return;
-    }
-
     if (pedido.estado !== ESTADOS_PEDIDO.RECIBIDO) {
-      dispararAlerta('La comanda no puede ser cancelada en su estado actual.', 'carmesi');
+      dispararAlerta('Solo se pueden cancelar pedidos en estado RECIBIDO (Invariante HTTP 422).', 'carmesi');
       return;
     }
 
-    setPedidos((prev) => prev.filter((p) => p.id !== pedidoId));
-
-    // Si la mesa no tiene otras comandas, liberarla
-    setMesas((prev) =>
-      prev.map((m) =>
-        m.id === pedido.idMesa
-          ? { ...m, estado: ESTADOS_MESA.DISPONIBLE, cuentaAbierta: false, comandaActivaId: undefined }
-          : m
-      )
-    );
-
-    registrarAuditoria(
-      'COMANDA_CANCELADA',
-      `PEDIDO-${pedidoId}`,
-      `Comanda #${pedidoId} cancelada en barra y mesa liberada`
-    );
-
-    dispararAlerta(`Comanda #${pedidoId} cancelada exitosamente.`, 'esmeralda');
-  }, [pedidos, registrarAuditoria, dispararAlerta]);
+    try {
+      await api.patch(`/pedidos/${pedidoId}/estado`, { nuevoEstado: ESTADOS_PEDIDO.CANCELADO });
+      setPedidos((prev) => prev.filter((p) => p.id !== pedidoId));
+      setMesas((prev) =>
+        prev.map((m) =>
+          m.id === pedido.idMesa
+            ? { ...m, estado: ESTADOS_MESA.DISPONIBLE, cuentaAbierta: false, comandaActivaId: undefined }
+            : m
+        )
+      );
+      dispararAlerta(`Comanda #${pedidoId} cancelada en barra y mesa liberada.`, 'esmeralda');
+    } catch (err) {
+      setPedidos((prev) => prev.filter((p) => p.id !== pedidoId));
+      setMesas((prev) =>
+        prev.map((m) =>
+          m.id === pedido.idMesa
+            ? { ...m, estado: ESTADOS_MESA.DISPONIBLE, cuentaAbierta: false, comandaActivaId: undefined }
+            : m
+        )
+      );
+      dispararAlerta(`Comanda #${pedidoId} cancelada localmente.`, 'ambar');
+    }
+  }, [pedidos, dispararAlerta]);
 
   /**
-   * Liquidación atómica de cuenta:
-   * 1. La cuenta pasa a estado PAGADA.
-   * 2. La mesa física pasa automáticamente a estado DISPONIBLE.
+   * 4. LIQUIDACIÓN Y CIERRE DE MESA REAL (Backend POST /cuentas/{id}/cerrar)
    */
-  const liquidarCuenta = useCallback((mesaId, porcentajePropina = 10) => {
+  const liquidarCuenta = useCallback(async (mesaId, porcentajePropina = 10, cuentaId = null) => {
     const mesa = mesas.find((m) => m.id === mesaId);
     if (!mesa) return null;
 
-    // Buscar comanda activa o items de la mesa
-    const pedidoActivo = pedidos.find(
-      (p) => p.idMesa === mesaId && p.estado !== ESTADOS_PEDIDO.CANCELADO
-    );
+    const idCuentaCerrar = cuentaId || mesa.comandaActivaId || mesaId;
 
-    const itemsACobrar = pedidoActivo ? pedidoActivo.items : comandasBorrador[mesaId] || [];
-    const subtotal = itemsACobrar.reduce((acc, it) => acc + (it.precioCongelado || 0) * (it.cantidad || 1), 0);
-    const propina = Math.round(subtotal * (porcentajePropina / 100));
-    const totalFinal = subtotal + propina;
+    try {
+      await api.post(`/cuentas/${idCuentaCerrar}/cerrar`);
+      const resMesas = await api.get('/mesas');
+      if (Array.isArray(resMesas.data)) {
+        setMesas(resMesas.data);
+      }
+      dispararAlerta(`Cuenta Mesa ${mesa.numero} liquidada en el servidor. Mesa liberada en PostgreSQL.`, 'esmeralda');
+    } catch (err) {
+      console.warn('[BlueVelvetContext] Fallback al liquidar cuenta:', err);
+      setMesas((prev) =>
+        prev.map((m) =>
+          m.id === mesaId
+            ? { ...m, estado: ESTADOS_MESA.DISPONIBLE, cuentaAbierta: false, comandaActivaId: undefined }
+            : m
+        )
+      );
+      dispararAlerta(`Cuenta Mesa ${mesa.numero} liquidada (Modo local). Mesa liberada.`, 'ambar');
+    }
 
-    // Liberar mesa atómicamente
-    setMesas((prev) =>
-      prev.map((m) =>
-        m.id === mesaId
-          ? { ...m, estado: ESTADOS_MESA.DISPONIBLE, cuentaAbierta: false, comandaActivaId: undefined }
-          : m
-      )
-    );
-
-    // Si había comanda en KDS, marcarla como entregada
+    const pedidoActivo = pedidos.find((p) => p.idMesa === mesaId && p.estado !== ESTADOS_PEDIDO.CANCELADO);
     if (pedidoActivo) {
       setPedidos((prev) =>
         prev.map((p) => (p.id === pedidoActivo.id ? { ...p, estado: ESTADOS_PEDIDO.ENTREGADO } : p))
       );
     }
 
-    // Limpiar borrador si existía
     setComandasBorrador((prev) => {
       const copia = { ...prev };
       delete copia[mesaId];
       return copia;
     });
 
-    registrarAuditoria(
-      'CUENTA_LIQUIDADA',
-      `MESA-${mesa.numero}`,
-      `Cuenta Mesa ${mesa.numero} liquidada ($${totalFinal.toLocaleString()} COP) y mesa liberada`
-    );
-
     return {
       exito: true,
       mesaNumero: mesa.numero,
-      subtotal,
-      propina,
-      porcentajePropina,
-      totalFinal,
-      items: itemsACobrar,
       fecha: new Date().toLocaleString(),
     };
-  }, [mesas, pedidos, comandasBorrador, registrarAuditoria]);
+  }, [mesas, pedidos, dispararAlerta]);
 
   /**
-   * Alternar disponibilidad de un cóctel (PATCH /api/v1/platos/{id}/disponible)
+   * 5. ALTERNANCIA DE STOCK EN VIVO (Backend PATCH /platos/{id}/disponible)
    */
-  const toggleDisponibilidadPlato = useCallback((platoId) => {
-    // Verificación RBAC: solo ADMIN, CHEF y BARTENDER pueden alterar stock
+  const toggleDisponibilidadPlato = useCallback(async (platoId) => {
     if (rolActivo === 'ROLE_MESERO') {
       dispararAlerta('Permiso denegado: El rol Mesero solo cuenta con permisos de lectura.', 'carmesi');
       return;
     }
 
-    setPlatos((prev) =>
-      prev.map((plato) => {
-        if (plato.id !== platoId) return plato;
-        const nuevoEstado = !plato.disponible;
+    const plato = platos.find((p) => p.id === platoId);
+    if (!plato) return;
+    const nuevoEstado = !plato.disponible;
 
-        registrarAuditoria(
-          'DISPONIBILIDAD_ALTERADA',
-          `PLATO-${plato.id}`,
-          `Stock de ${plato.nombre} cambiado a ${nuevoEstado ? 'Disponible' : 'Agotado en barra'}`
-        );
-
-        dispararAlerta(
-          `${plato.nombre} ahora está ${nuevoEstado ? 'DISPONIBLE' : 'AGOTADO EN BARRA'}.`,
-          nuevoEstado ? 'esmeralda' : 'ambar'
-        );
-
-        return { ...plato, disponible: nuevoEstado };
-      })
-    );
-  }, [rolActivo, registrarAuditoria, dispararAlerta]);
+    try {
+      const response = await api.patch(`/platos/${platoId}/disponible?disponible=${nuevoEstado}`);
+      setPlatos((prev) =>
+        prev.map((p) => (p.id === platoId ? { ...p, disponible: response.data.disponible } : p))
+      );
+      dispararAlerta(`${plato.nombre} ahora está ${nuevoEstado ? 'DISPONIBLE' : 'AGOTADO EN BARRA'} (Persistido en BD).`, nuevoEstado ? 'esmeralda' : 'ambar');
+    } catch (err) {
+      console.warn('[BlueVelvetContext] Fallback al alternar stock:', err);
+      setPlatos((prev) =>
+        prev.map((p) => (p.id === platoId ? { ...p, disponible: nuevoEstado } : p))
+      );
+      dispararAlerta(`${plato.nombre} cambiado a ${nuevoEstado ? 'DISPONIBLE' : 'AGOTADO EN BARRA'} (Modo local).`, nuevoEstado ? 'esmeralda' : 'ambar');
+    }
+  }, [rolActivo, platos, dispararAlerta]);
 
   /**
-   * Crear nuevo cóctel en catálogo (Validaciones Jakarta del backend)
+   * 6. CREAR NUEVO CÓCTEL EN CATÁLOGO (Backend POST /platos)
    */
-  const crearPlato = useCallback((nuevoPlato) => {
+  const crearPlato = useCallback(async (nuevoPlato) => {
     if (rolActivo !== 'ROLE_ADMIN' && rolActivo !== 'ROLE_CHEF') {
       dispararAlerta('Permiso denegado: Solo Administrador y Mixólogo Jefe pueden crear cócteles.', 'carmesi');
       return false;
@@ -673,52 +625,49 @@ export function BlueVelvetProvider({ children }) {
       return false;
     }
 
-    const existe = platos.some(
-      (p) => p.nombre.toLowerCase().trim() === nuevoPlato.nombre.toLowerCase().trim()
-    );
-    if (existe) {
-      dispararAlerta('Ya existe una creación con ese nombre en la carta.', 'carmesi');
-      return false;
-    }
-
     const precioNum = Number(nuevoPlato.precio);
     if (!precioNum || precioNum <= 0) {
       dispararAlerta('El precio debe ser un valor numérico mayor a cero.', 'carmesi');
       return false;
     }
 
-    if (!nuevoPlato.descripcion?.trim()) {
-      dispararAlerta('El perfil sensorial y notas de cata son obligatorios.', 'carmesi');
-      return false;
-    }
-
-    const platoCreado = {
-      id: Date.now(),
+    const payload = {
       nombre: nuevoPlato.nombre.trim(),
-      categoria: nuevoPlato.categoria || CATEGORIAS_BEBIDA.COCTEL_AUTOR,
       precio: precioNum,
-      descripcion: nuevoPlato.descripcion.trim(),
-      graduacionAlcoholica: Number(nuevoPlato.graduacionAlcoholica) || 0,
-      notasSensoriales: nuevoPlato.notasSensoriales || ['Perfil exclusivo'],
-      cristaleria: nuevoPlato.cristaleria || 'Copa sugerida de la casa',
-      disponible: true,
-      esAlcoholico: nuevoPlato.categoria !== CATEGORIAS_BEBIDA.MOCKTAIL && nuevoPlato.categoria !== CATEGORIAS_BEBIDA.BOTANICO,
-      imagenUrl:
-        nuevoPlato.imagenUrl ||
-        'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80',
+      categoria: nuevoPlato.categoria || CATEGORIAS_BEBIDA.COCTEL_AUTOR,
+      descripcion: nuevoPlato.descripcion?.trim() || 'Cóctel de autor Blue Velvet',
     };
 
-    setPlatos((prev) => [platoCreado, ...prev]);
-
-    registrarAuditoria(
-      'NUEVO_COCTEL_CREADO',
-      `PLATO-${platoCreado.id}`,
-      `Nueva creación incorporada al catálogo: ${platoCreado.nombre} ($${platoCreado.precio.toLocaleString()} COP)`
-    );
-
-    dispararAlerta(`Cóctel "${platoCreado.nombre}" incorporado exitosamente a la carta.`, 'esmeralda');
-    return true;
-  }, [rolActivo, platos, registrarAuditoria, dispararAlerta]);
+    try {
+      const response = await api.post('/platos', payload);
+      const platoPersistido = {
+        ...response.data,
+        graduacionAlcoholica: Number(nuevoPlato.graduacionAlcoholica) || 0,
+        notasSensoriales: nuevoPlato.notasSensoriales || ['Perfil exclusivo'],
+        cristaleria: nuevoPlato.cristaleria || 'Copa sugerida de la casa',
+        esAlcoholico: nuevoPlato.categoria !== CATEGORIAS_BEBIDA.MOCKTAIL && nuevoPlato.categoria !== CATEGORIAS_BEBIDA.BOTANICO,
+        imagenUrl: nuevoPlato.imagenUrl || 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80',
+      };
+      setPlatos((prev) => [platoPersistido, ...prev]);
+      dispararAlerta(`Cóctel "${platoPersistido.nombre}" creado y persistido en la base de datos.`, 'esmeralda');
+      return true;
+    } catch (err) {
+      console.warn('[BlueVelvetContext] Fallback al crear plato:', err);
+      const platoFallback = {
+        id: Date.now(),
+        ...payload,
+        disponible: true,
+        graduacionAlcoholica: Number(nuevoPlato.graduacionAlcoholica) || 0,
+        notasSensoriales: nuevoPlato.notasSensoriales || ['Perfil exclusivo'],
+        cristaleria: nuevoPlato.cristaleria || 'Copa sugerida de la casa',
+        esAlcoholico: nuevoPlato.categoria !== CATEGORIAS_BEBIDA.MOCKTAIL && nuevoPlato.categoria !== CATEGORIAS_BEBIDA.BOTANICO,
+        imagenUrl: nuevoPlato.imagenUrl || 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80',
+      };
+      setPlatos((prev) => [platoFallback, ...prev]);
+      dispararAlerta(`Cóctel "${platoFallback.nombre}" incorporado (Modo local).`, 'ambar');
+      return true;
+    }
+  }, [rolActivo, dispararAlerta]);
 
   // Total de comandas activas en KDS (no entregadas)
   const comandasActivasKDSCount = pedidos.filter(
@@ -731,7 +680,6 @@ export function BlueVelvetProvider({ children }) {
     pedidos,
     eventosAuditoria,
     rolActivo,
-    setRolActivo,
     mesaSeleccionadaId,
     seleccionarMesa,
     comandasBorrador,
@@ -747,6 +695,8 @@ export function BlueVelvetProvider({ children }) {
     comandasActivasKDSCount,
     alertaFlotante,
     dispararAlerta,
+    cargandoInicial,
+    cargarDatosIniciales,
   };
 
   return (

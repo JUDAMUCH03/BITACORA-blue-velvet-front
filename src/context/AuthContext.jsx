@@ -69,7 +69,7 @@ export function AuthProvider({ children }) {
     token,
     loading,
     isAuthenticated: Boolean(token),
-    isAdmin: user?.rol === 'ADMIN',
+    isAdmin: user?.rol === 'ROLE_ADMIN' || user?.rol === 'ADMIN',
     login,
     logout,
   };
@@ -79,6 +79,14 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
+}
+
+export function useAuth() {
+  const context = React.useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth debe ser utilizado dentro de un AuthProvider');
+  }
+  return context;
 }
 
 export default AuthContext;

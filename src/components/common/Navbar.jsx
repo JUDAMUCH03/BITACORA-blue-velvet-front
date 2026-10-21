@@ -37,10 +37,13 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const esStaff = ['ROLE_ADMIN', 'ROLE_CHEF', 'ROLE_BARTENDER', 'ROLE_MESERO'].includes(user?.rol);
+
   const navLinks = [
-    { to: '/', label: 'Servicio Nocturno', icon: Flame },
+    { to: '/', label: 'Inicio', icon: Sparkles },
     { to: '/menu', label: 'Carta de Autor', icon: UtensilsCrossed },
     { to: '/reservas', label: 'Reservar Mesa', icon: CalendarCheck },
+    ...(esStaff ? [{ to: '/operacion', label: 'Servicio Nocturno', icon: Flame }] : []),
   ];
 
   const getNavLinkClass = ({ isActive }) =>
@@ -143,10 +146,10 @@ export default function Navbar() {
           {/* BOTÓN MÓVIL */}
           <div className="flex md:hidden items-center gap-2">
             <Link
-              to="/"
+              to={esStaff ? "/operacion" : "/reservas"}
               className="px-3 py-1.5 text-xs font-bold rounded-full bg-oro text-noche font-sans shadow-sm"
             >
-              Servicio
+              {esStaff ? "Servicio" : "Reservar"}
             </Link>
 
             <button
