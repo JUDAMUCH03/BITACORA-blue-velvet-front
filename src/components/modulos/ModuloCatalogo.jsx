@@ -11,6 +11,7 @@ import {
   ToggleLeft,
   ToggleRight,
   Lock,
+  Trash2,
 } from 'lucide-react';
 import { useBlueVelvet } from '../../context/BlueVelvetContext';
 import { CATEGORIAS_BEBIDA, ROLES_USUARIO } from '../../types/dominio';
@@ -21,6 +22,7 @@ export default function ModuloCatalogo() {
     platos,
     toggleDisponibilidadPlato,
     crearPlato,
+    eliminarPlato,
     eventosAuditoria,
     rolActivo,
   } = useBlueVelvet();
@@ -64,6 +66,14 @@ export default function ModuloCatalogo() {
       setNuevaDescripcion('');
       setMostrarModalCreacion(false);
     }
+  };
+
+  const handleEliminar = async (plato) => {
+    const confirmacion = window.confirm(
+      `¿Confirmas que deseas eliminar permanentemente el cóctel "${plato.nombre}" del catálogo y de la base de datos PostgreSQL?`
+    );
+    if (!confirmacion) return;
+    await eliminarPlato(plato.id);
   };
 
   return (
@@ -166,7 +176,8 @@ export default function ModuloCatalogo() {
                   <th className="py-3 px-3">Producto</th>
                   <th className="py-3 px-3">Categoría</th>
                   <th className="py-3 px-3">Precio</th>
-                  <th className="py-3 px-3 text-right">Estado de Stock</th>
+                  <th className="py-3 px-3 text-center">Estado de Stock</th>
+                  <th className="py-3 px-3 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -202,8 +213,8 @@ export default function ModuloCatalogo() {
                         {formatCOP(plato.precio)}
                       </td>
 
-                      <td className="py-3.5 px-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="py-3.5 px-3 text-center">
+                        <div className="flex items-center justify-center gap-2">
                           {plato.disponible ? (
                             <span className="insignia-verde text-[9px] py-0.5">
                               Disponible
@@ -238,6 +249,20 @@ export default function ModuloCatalogo() {
                             )}
                           </button>
                         </div>
+                      </td>
+
+                      <td className="py-3.5 px-3 text-right">
+                        {puedeCrear && (
+                          <button
+                            type="button"
+                            onClick={() => handleEliminar(plato)}
+                            className="p-1.5 rounded-lg text-texto-tenue hover:text-carmesi hover:bg-carmesi/10 transition-colors"
+                            title={`Eliminar permanentemente "${plato.nombre}" de la carta y PostgreSQL`}
+                            aria-label={`Eliminar ${plato.nombre}`}
+                          >
+                            <Trash2 className="w-4 h-4 text-carmesi/70 hover:text-carmesi" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

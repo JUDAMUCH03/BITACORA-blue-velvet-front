@@ -704,6 +704,36 @@ export function BlueVelvetProvider({ children }) {
     }
   }, [rolActivo, dispararAlerta]);
 
+  /**
+   * 7. ELIMINAR CÓCTEL DEL CATÁLOGO (Backend DELETE /platos/{id})
+   */
+  const eliminarPlato = useCallback(async (platoId) => {
+    const esAutorizado =
+      !rolActivo ||
+      rolActivo.includes('ADMIN') ||
+      rolActivo === 'ROLE_ADMIN';
+
+    if (!esAutorizado) {
+      dispararAlerta('Permiso denegado: Solo el Administrador puede eliminar cócteles.', 'carmesi');
+      return false;
+    }
+
+    const platoAEliminar = platos.find((p) => p.id === platoId);
+    const nombrePlato = platoAEliminar?.nombre || `ID #${platoId}`;
+
+    try {
+      await api.delete(`/platos/${platoId}`);
+      setPlatos((prev) => prev.filter((p) => p.id !== platoId));
+      dispararAlerta(`Cóctel "${nombrePlato}" eliminado de la base de datos PostgreSQL.`, 'esmeralda');
+      return true;
+    } catch (err) {
+      console.warn('[BlueVelvetContext] Fallback al eliminar plato:', err);
+      setPlatos((prev) => prev.filter((p) => p.id !== platoId));
+      dispararAlerta(`Cóctel "${nombrePlato}" removido del catálogo (Modo local).`, 'ambar');
+      return true;
+    }
+  }, [rolActivo, platos, dispararAlerta]);
+
   // Total de comandas activas en KDS (no entregadas)
   const comandasActivasKDSCount = pedidos.filter(
     (p) => p.estado !== ESTADOS_PEDIDO.ENTREGADO && p.estado !== ESTADOS_PEDIDO.CANCELADO
@@ -727,6 +757,7 @@ export function BlueVelvetProvider({ children }) {
     liquidarCuenta,
     toggleDisponibilidadPlato,
     crearPlato,
+    eliminarPlato,
     comandasActivasKDSCount,
     alertaFlotante,
     dispararAlerta,
