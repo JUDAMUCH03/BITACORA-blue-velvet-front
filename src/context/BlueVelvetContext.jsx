@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
+import { COCKTAIL_IMAGE_MAP } from '../services/menuService';
 import { useAuth } from './AuthContext';
 import {
   CATEGORIAS_BEBIDA,
@@ -12,8 +13,12 @@ import {
 
 const BlueVelvetContext = createContext(null);
 
+const DEFAULT_COCKTAIL_IMAGE =
+  'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80';
+
 // =========================================================================
-// DATOS SEMILLA DE ALTA FIDELIDAD PARA CONTINGENCIA / MODO OFFLINE
+// DATOS SEMILLA DE ALTA FIDELIDAD 100% SINCRONIZADOS CON POSTGRESQL AZURE
+// (8 Cócteles Oficiales de Autor sin alimentos, carnes ni postres)
 // =========================================================================
 
 const PLATOS_INICIALES = [
@@ -21,117 +26,104 @@ const PLATOS_INICIALES = [
     id: 1,
     nombre: 'Smoked Old Fashioned',
     categoria: CATEGORIAS_BEBIDA.COCTEL_AUTOR,
-    precio: 48000,
-    descripcion: 'Bourbon en infusión de haba tonka, amargo de cacao criollo y ahumado en campana de roble americano.',
+    precio: 45000,
+    descripcion: 'Bourbon añejado en roble, bitter de cacao, azúcar demerara y ahumado en campana de madera.',
     graduacionAlcoholica: 32,
-    notasSensoriales: ['Ahumado profundo', 'Vainilla noble', 'Naranja quemada'],
+    notasSensoriales: ['Ahumado profundo', 'Vainilla noble', 'Cacao criollo'],
     cristaleria: 'Vaso Old Fashioned de cristal tallado',
     disponible: true,
-    imagenUrl: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80',
+    imagenUrl: COCKTAIL_IMAGE_MAP[1],
     esAlcoholico: true,
   },
   {
     id: 2,
-    nombre: 'Negroni Botánico de la Casa',
+    nombre: 'Velvet Negroni Botánico',
     categoria: CATEGORIAS_BEBIDA.COCTEL_AUTOR,
-    precio: 46000,
-    descripcion: 'Gin botánico destilado al vacío, amargo artesanal de alcachofa, vermut dulce añejo y aceites esenciales de pomelo.',
+    precio: 42000,
+    descripcion: 'Gin macerado en lavanda y enebro, Campari infusionado y vermouth rosso de autor.',
     graduacionAlcoholica: 28,
-    notasSensoriales: ['Herbal amargo', 'Cítrico persistente', 'Corteza de pino'],
+    notasSensoriales: ['Herbal amargo', 'Lavanda fresca', 'Cítrico persistente'],
     cristaleria: 'Vaso bajo con prisma de hielo cristalino',
     disponible: true,
-    imagenUrl: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=800&q=80',
+    imagenUrl: COCKTAIL_IMAGE_MAP[2],
     esAlcoholico: true,
   },
   {
     id: 3,
-    nombre: 'Clover Club Blue Velvet',
+    nombre: 'Penicillin de Autor',
     categoria: CATEGORIAS_BEBIDA.COCTEL_AUTOR,
-    precio: 45000,
-    descripcion: 'Gin seco macerado en moras de páramo, cordial de frambuesa silvestre, clara emulsionada y polvo de oro puro.',
-    graduacionAlcoholica: 22,
-    notasSensoriales: ['Aterciopelado', 'Frutos rojos secos', 'Toque floral'],
-    cristaleria: 'Copa Coupé vintage',
+    precio: 44000,
+    descripcion: 'Blended scotch whisky, jengibre fresco macerado, miel de agave, limón y toque de Islay ahumado.',
+    graduacionAlcoholica: 26,
+    notasSensoriales: ['Jengibre vibrante', 'Miel de agave', 'Turba ahumada'],
+    cristaleria: 'Vaso bajo con roca esférica',
     disponible: true,
-    imagenUrl: 'https://images.unsplash.com/photo-1556881286-fc6915169721?auto=format&fit=crop&w=800&q=80',
+    imagenUrl: COCKTAIL_IMAGE_MAP[3],
     esAlcoholico: true,
   },
   {
     id: 4,
-    nombre: 'Macallan 12 Double Cask',
-    categoria: CATEGORIAS_BEBIDA.DESTILADO_PREMIUM,
-    precio: 72000,
-    descripcion: 'Whisky escocés de malta única criado en barricas de roble americano y europeo sazonadas con jerez oloroso.',
-    graduacionAlcoholica: 40,
-    notasSensoriales: ['Caramelo suave', 'Jengibre dulce', 'Nuez moscada'],
-    cristaleria: 'Copa Glencairn de degustación',
+    nombre: 'Mezcalita Floral Oaxaqueña',
+    categoria: CATEGORIAS_BEBIDA.COCTEL_AUTOR,
+    precio: 40000,
+    descripcion: 'Mezcal artesanal espadín, licor de damiana, cordial de flor de jamaica y sal de gusano ahumada.',
+    graduacionAlcoholica: 24,
+    notasSensoriales: ['Floral terroso', 'Humo sutil', 'Acidez de jamaica'],
+    cristaleria: 'Copa Coupé con escarchado botánico',
     disponible: true,
-    imagenUrl: 'https://images.unsplash.com/photo-1527281400683-1aae777175f8?auto=format&fit=crop&w=800&q=80',
+    imagenUrl: COCKTAIL_IMAGE_MAP[4],
     esAlcoholico: true,
   },
   {
     id: 5,
-    nombre: 'Ron Zacapa Centenario XO',
+    nombre: 'Macallan 12 Double Cask',
     categoria: CATEGORIAS_BEBIDA.DESTILADO_PREMIUM,
-    precio: 88000,
-    descripcion: 'Mezcla de rones de 6 a 25 años afinado en barricas de coñac francés. Notas melosas inconfundibles.',
+    precio: 65000,
+    descripcion: 'Single malt scotch servido en esfera de hielo tallada a mano con notas de miel y roble.',
     graduacionAlcoholica: 40,
-    notasSensoriales: ['Cacao tostado', 'Fruta pasificada', 'Cedro añejo'],
-    cristaleria: 'Copa Snifter tibia',
+    notasSensoriales: ['Caramelo suave', 'Jengibre dulce', 'Roble de jerez'],
+    cristaleria: 'Copa Glencairn de degustación',
     disponible: true,
-    imagenUrl: 'https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?auto=format&fit=crop&w=800&q=80',
+    imagenUrl: COCKTAIL_IMAGE_MAP[5],
     esAlcoholico: true,
   },
   {
     id: 6,
-    nombre: 'Velvet Cloud Mocktail 0.0%',
-    categoria: CATEGORIAS_BEBIDA.MOCKTAIL,
-    precio: 34000,
-    descripcion: 'Destilado botánico sin alcohol 0.0%, hidrolato de azahar, pulpa de lichi perfumada y nube etérea de vapor botánico.',
-    graduacionAlcoholica: 0.0,
-    notasSensoriales: ['Fresco floral', 'Cero astringencia', 'Dulzor sedoso'],
-    cristaleria: 'Copa balón esmerilada',
+    nombre: 'Zacapa Centenario 23',
+    categoria: CATEGORIAS_BEBIDA.DESTILADO_PREMIUM,
+    precio: 55000,
+    descripcion: 'Ron añejado en sistema solera, servido en copa balón con twist de naranja y nibs de cacao.',
+    graduacionAlcoholica: 40,
+    notasSensoriales: ['Cacao tostado', 'Fruta pasificada', 'Miel de caña'],
+    cristaleria: 'Copa Snifter tibia',
     disponible: true,
-    imagenUrl: 'https://images.unsplash.com/photo-1536935338788-846bb9981813?auto=format&fit=crop&w=800&q=80',
-    esAlcoholico: false,
+    imagenUrl: COCKTAIL_IMAGE_MAP[6],
+    esAlcoholico: true,
   },
   {
     id: 7,
-    nombre: 'Elixir Cítrico de Romero 0.0%',
+    nombre: 'Velvet Cloud 0.0%',
     categoria: CATEGORIAS_BEBIDA.MOCKTAIL,
-    precio: 32000,
-    descripcion: 'Cordial casero de romero de huerto, reducción de pomelo ruby y agua tónica botánica de quinina salvaje.',
+    precio: 28000,
+    descripcion: 'Hidrolatos botánicos de enebro sin alcohol, clarificado de cítricos y cordial de jazmín 0.0% ABV.',
     graduacionAlcoholica: 0.0,
-    notasSensoriales: ['Balsámico herbáceo', 'Cítrico efervescente', 'Amargor suave'],
-    cristaleria: 'Vaso Collins con varilla tallada',
+    notasSensoriales: ['Fresco floral', 'Clarificado cítrico', 'Sedoso jazmín'],
+    cristaleria: 'Copa balón esmerilada',
     disponible: true,
-    imagenUrl: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=80',
+    imagenUrl: COCKTAIL_IMAGE_MAP[7],
     esAlcoholico: false,
   },
   {
     id: 8,
-    nombre: 'Jardín Nocturno',
+    nombre: 'Elíxir Botánico de Romero',
     categoria: CATEGORIAS_BEBIDA.BOTANICO,
-    precio: 36000,
-    descripcion: 'Infusión en frío de flor de saúco, pepino persa macerado, gotas de clorofila pura y rocío de limón sutil.',
+    precio: 26000,
+    descripcion: 'Infusión fría de romero silvestre, tónica artesanal de flor de sauco y perfume de bergamota.',
     graduacionAlcoholica: 0.0,
-    notasSensoriales: ['Extremadamente fresco', 'Vegetal noble', 'Fragancia verde'],
-    cristaleria: 'Copa de degustación amplia',
+    notasSensoriales: ['Balsámico herbáceo', 'Sauco silvestre', 'Bergamota noble'],
+    cristaleria: 'Vaso Collins con varilla tallada',
     disponible: true,
-    imagenUrl: 'https://images.unsplash.com/photo-1579954115545-a95591f28bfc?auto=format&fit=crop&w=800&q=80',
-    esAlcoholico: false,
-  },
-  {
-    id: 9,
-    nombre: 'Infusión de Lavanda Silvestre',
-    categoria: CATEGORIAS_BEBIDA.BOTANICO,
-    precio: 35000,
-    descripcion: 'Flores de lavanda andina, cordial de jengibre y manzana verde prensada en frío.',
-    graduacionAlcoholica: 0.0,
-    notasSensoriales: ['Floral balsámico', 'Picante tenue', 'Acidez brillante'],
-    cristaleria: 'Vaso bajo con esfera de hielo',
-    disponible: false,
-    imagenUrl: 'https://images.unsplash.com/photo-1587888637140-849b25d80ef9?auto=format&fit=crop&w=800&q=80',
+    imagenUrl: COCKTAIL_IMAGE_MAP[8],
     esAlcoholico: false,
   },
 ];
@@ -159,7 +151,7 @@ const PEDIDOS_KDS_INICIALES = [
         id: 201,
         idPlato: 1,
         nombrePlato: 'Smoked Old Fashioned',
-        precioCongelado: 48000,
+        precioCongelado: 45000,
         cantidad: 1,
         spiritBrandId: 3,
         nombreDestilado: "Maker's Mark Bourbon",
@@ -168,9 +160,9 @@ const PEDIDOS_KDS_INICIALES = [
       },
       {
         id: 202,
-        idPlato: 6,
-        nombrePlato: 'Velvet Cloud Mocktail 0.0%',
-        precioCongelado: 34000,
+        idPlato: 7,
+        nombrePlato: 'Velvet Cloud 0.0%',
+        precioCongelado: 28000,
         cantidad: 1,
         spiritModificationsCount: 0,
         garnishes: ['Pétalos de rosa comestibles'],
@@ -187,8 +179,8 @@ const PEDIDOS_KDS_INICIALES = [
       {
         id: 203,
         idPlato: 2,
-        nombrePlato: 'Negroni Botánico de la Casa',
-        precioCongelado: 46000,
+        nombrePlato: 'Velvet Negroni Botánico',
+        precioCongelado: 42000,
         cantidad: 1,
         spiritBrandId: 1,
         nombreDestilado: "Hendrick's Gin",
@@ -197,12 +189,12 @@ const PEDIDOS_KDS_INICIALES = [
       },
       {
         id: 204,
-        idPlato: 3,
-        nombrePlato: 'Clover Club Blue Velvet',
-        precioCongelado: 45000,
+        idPlato: 4,
+        nombrePlato: 'Mezcalita Floral Oaxaqueña',
+        precioCongelado: 40000,
         cantidad: 1,
-        spiritBrandId: 1,
-        nombreDestilado: "Hendrick's Gin",
+        spiritBrandId: 5,
+        nombreDestilado: 'Mezcal 400 Conejos',
         spiritModificationsCount: 0,
         garnishes: ['Pétalos de rosa comestibles'],
       },
@@ -258,7 +250,16 @@ export function BlueVelvetProvider({ children }) {
       ]);
 
       if (resMenu.status === 'fulfilled' && Array.isArray(resMenu.value.data) && resMenu.value.data.length > 0) {
-        setPlatos(resMenu.value.data);
+        const platosEnriquecidos = resMenu.value.data.map((p) => ({
+          ...p,
+          imagenUrl: p.imagenUrl || COCKTAIL_IMAGE_MAP[p.id] || DEFAULT_COCKTAIL_IMAGE,
+          graduacionAlcoholica:
+            p.graduacionAlcoholica ??
+            (p.categoria === CATEGORIAS_BEBIDA.MOCKTAIL || p.categoria === CATEGORIAS_BEBIDA.BOTANICO ? 0 : 25),
+          esAlcoholico:
+            p.categoria !== CATEGORIAS_BEBIDA.MOCKTAIL && p.categoria !== CATEGORIAS_BEBIDA.BOTANICO,
+        }));
+        setPlatos(platosEnriquecidos);
       }
 
       if (resMesas.status === 'fulfilled' && Array.isArray(resMesas.value.data) && resMesas.value.data.length > 0) {
@@ -640,16 +641,43 @@ export function BlueVelvetProvider({ children }) {
 
     try {
       const response = await api.post('/platos', payload);
-      const platoPersistido = {
-        ...response.data,
-        graduacionAlcoholica: Number(nuevoPlato.graduacionAlcoholica) || 0,
-        notasSensoriales: nuevoPlato.notasSensoriales || ['Perfil exclusivo'],
-        cristaleria: nuevoPlato.cristaleria || 'Copa sugerida de la casa',
-        esAlcoholico: nuevoPlato.categoria !== CATEGORIAS_BEBIDA.MOCKTAIL && nuevoPlato.categoria !== CATEGORIAS_BEBIDA.BOTANICO,
-        imagenUrl: nuevoPlato.imagenUrl || 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80',
-      };
-      setPlatos((prev) => [platoPersistido, ...prev]);
-      dispararAlerta(`Cóctel "${platoPersistido.nombre}" creado y persistido en la base de datos.`, 'esmeralda');
+      // Sincronización inmediata con PostgreSQL (GET /platos)
+      try {
+        const resPlatos = await api.get('/platos');
+        if (Array.isArray(resPlatos.data) && resPlatos.data.length > 0) {
+          const platosEnriquecidos = resPlatos.data.map((p) => ({
+            ...p,
+            imagenUrl: p.imagenUrl || COCKTAIL_IMAGE_MAP[p.id] || nuevoPlato.imagenUrl || DEFAULT_COCKTAIL_IMAGE,
+            graduacionAlcoholica:
+              p.graduacionAlcoholica ??
+              (p.categoria === CATEGORIAS_BEBIDA.MOCKTAIL || p.categoria === CATEGORIAS_BEBIDA.BOTANICO ? 0 : 25),
+            esAlcoholico:
+              p.categoria !== CATEGORIAS_BEBIDA.MOCKTAIL && p.categoria !== CATEGORIAS_BEBIDA.BOTANICO,
+          }));
+          setPlatos(platosEnriquecidos);
+        } else {
+          const platoPersistido = {
+            ...response.data,
+            graduacionAlcoholica: Number(nuevoPlato.graduacionAlcoholica) || 0,
+            notasSensoriales: nuevoPlato.notasSensoriales || ['Perfil botánico exclusivo'],
+            cristaleria: nuevoPlato.cristaleria || 'Copa sugerida de la casa',
+            esAlcoholico: nuevoPlato.categoria !== CATEGORIAS_BEBIDA.MOCKTAIL && nuevoPlato.categoria !== CATEGORIAS_BEBIDA.BOTANICO,
+            imagenUrl: nuevoPlato.imagenUrl || DEFAULT_COCKTAIL_IMAGE,
+          };
+          setPlatos((prev) => [platoPersistido, ...prev]);
+        }
+      } catch {
+        const platoPersistido = {
+          ...response.data,
+          graduacionAlcoholica: Number(nuevoPlato.graduacionAlcoholica) || 0,
+          notasSensoriales: nuevoPlato.notasSensoriales || ['Perfil botánico exclusivo'],
+          cristaleria: nuevoPlato.cristaleria || 'Copa sugerida de la casa',
+          esAlcoholico: nuevoPlato.categoria !== CATEGORIAS_BEBIDA.MOCKTAIL && nuevoPlato.categoria !== CATEGORIAS_BEBIDA.BOTANICO,
+          imagenUrl: nuevoPlato.imagenUrl || DEFAULT_COCKTAIL_IMAGE,
+        };
+        setPlatos((prev) => [platoPersistido, ...prev]);
+      }
+      dispararAlerta(`Cóctel "${nuevoPlato.nombre}" creado y persistido en la base de datos PostgreSQL.`, 'esmeralda');
       return true;
     } catch (err) {
       console.warn('[BlueVelvetContext] Fallback al crear plato:', err);
@@ -658,10 +686,10 @@ export function BlueVelvetProvider({ children }) {
         ...payload,
         disponible: true,
         graduacionAlcoholica: Number(nuevoPlato.graduacionAlcoholica) || 0,
-        notasSensoriales: nuevoPlato.notasSensoriales || ['Perfil exclusivo'],
+        notasSensoriales: nuevoPlato.notasSensoriales || ['Perfil botánico exclusivo'],
         cristaleria: nuevoPlato.cristaleria || 'Copa sugerida de la casa',
         esAlcoholico: nuevoPlato.categoria !== CATEGORIAS_BEBIDA.MOCKTAIL && nuevoPlato.categoria !== CATEGORIAS_BEBIDA.BOTANICO,
-        imagenUrl: nuevoPlato.imagenUrl || 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80',
+        imagenUrl: nuevoPlato.imagenUrl || DEFAULT_COCKTAIL_IMAGE,
       };
       setPlatos((prev) => [platoFallback, ...prev]);
       dispararAlerta(`Cóctel "${platoFallback.nombre}" incorporado (Modo local).`, 'ambar');

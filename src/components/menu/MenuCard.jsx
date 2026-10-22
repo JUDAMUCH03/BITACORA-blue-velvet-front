@@ -16,8 +16,15 @@ export function formatCOP(price) {
   }).format(price);
 }
 
+const CATEGORIA_LABELS = {
+  COCTEL_AUTOR: 'Firma de Autor',
+  DESTILADO_PREMIUM: 'Destilado Premium',
+  MOCKTAIL: 'Mocktail 0.0%',
+  BOTANICO: 'Mixología Botánica',
+};
+
 /**
- * Tarjeta individual de la carta gastronómica de Blue Velvet
+ * Tarjeta individual de la carta de coctelería y mixología de Blue Velvet
  */
 export default function MenuCard({ item, onSelectDish }) {
   const [added, setAdded] = useState(false);
@@ -25,9 +32,10 @@ export default function MenuCard({ item, onSelectDish }) {
   const navigate = useNavigate();
 
   const id = item.id || item._id;
-  const nombre = item.nombre || item.name || 'Plato de Autor';
+  const nombre = item.nombre || item.name || 'Cóctel de Autor';
   const descripcion = item.descripcion || item.description || '';
-  const categoria = item.categoria || item.category || 'General';
+  const categoriaRaw = item.categoria || item.category || 'COCTEL_AUTOR';
+  const categoriaEtiqueta = CATEGORIA_LABELS[categoriaRaw] || categoriaRaw.replace('_', ' ');
   const precio = item.precio || item.price || 0;
   const imagenUrl = item.imagenUrl || item.imageUrl;
   const disponible = item.disponible !== undefined ? item.disponible : true;
@@ -63,7 +71,7 @@ export default function MenuCard({ item, onSelectDish }) {
 
         {/* Badge de Categoría */}
         <span className="absolute top-3 left-3 text-[11px] font-semibold uppercase tracking-wider text-velvet-gold-light px-3 py-1 rounded-full bg-velvet-900/90 border border-velvet-gold/30 backdrop-blur-md">
-          {categoria}
+          {categoriaEtiqueta}
         </span>
 
         {/* Disponibilidad */}
@@ -77,7 +85,7 @@ export default function MenuCard({ item, onSelectDish }) {
         <button
           type="button"
           onClick={() => setShowDetail(!showDetail)}
-          title="Ver detalle del plato"
+          title="Ver detalle del cóctel"
           className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-velvet-900/80 border border-white/20 text-slate-300 hover:text-velvet-gold hover:border-velvet-gold/60 flex items-center justify-center transition-colors backdrop-blur-md"
         >
           <Info className="w-4 h-4" />
@@ -102,9 +110,9 @@ export default function MenuCard({ item, onSelectDish }) {
 
           {showDetail && (
             <div className="p-3 rounded-xl bg-velvet-800/90 border border-velvet-gold/20 text-[11px] text-slate-300 space-y-1 animate-fadeIn">
-              <p className="font-semibold text-velvet-gold">Experiencia Sensorial Blue Velvet:</p>
-              <p>Materia prima seleccionada, técnica al vacío y reducción lenta de autor.</p>
-              <p className="text-slate-400">Maridaje sugerido: Cava Privada o Cóctel Signature.</p>
+              <p className="font-semibold text-velvet-gold">Perfil Sensorial Blue Velvet:</p>
+              <p>Maceración botánica, destilación artesanal y técnica mixológica de autor.</p>
+              <p className="text-slate-400">Guarnición sugerida: Botánico fresco flameado o esfera aromática.</p>
             </div>
           )}
         </div>

@@ -1,5 +1,5 @@
 /**
- * Contratos de datos para el menú y catálogo de servicios gastronómicos
+ * Contratos de datos para la carta y catálogo de coctelería y mixología de autor
  */
 
 /**
@@ -8,7 +8,7 @@
  * @param {string} nombre
  * @param {string} descripcion
  * @param {number} precio
- * @param {string} categoria - ('Entradas' | 'Platos Fuertes' | 'Postres' | 'Coctelería de Autor')
+ * @param {string} categoria - ('COCTEL_AUTOR' | 'DESTILADO_PREMIUM' | 'MOCKTAIL' | 'BOTANICO')
  * @param {string} imagenUrl
  * @param {boolean} [disponible=true]
  * @returns {{ id: string|number, nombre: string, descripcion: string, precio: number, categoria: string, imagenUrl: string, disponible: boolean }}

@@ -3,10 +3,10 @@ import menuService from '../services/menuService';
 
 export const MENU_CATEGORIES = [
   'TODOS',
-  'ENTRADAS',
-  'PLATOS FUERTES',
-  'POSTRES',
-  'COCTELERIA',
+  'COCTEL_AUTOR',
+  'DESTILADO_PREMIUM',
+  'MOCKTAIL',
+  'BOTANICO',
 ];
 
 /**
@@ -36,7 +36,7 @@ export function useMenu(initialCategory = 'TODOS') {
       setItems(data);
     } catch (err) {
       console.error('[useMenu] Error al consultar la carta:', err);
-      setError(err.message || 'No se pudo cargar la carta gastronómica.');
+      setError(err.message || 'No se pudo cargar la carta de cócteles.');
     } finally {
       setLoading(false);
     }

@@ -22,9 +22,9 @@ import { formatCOP } from '../menu/MenuCard';
 
 const FILTROS_CARTA = [
   { id: 'TODOS', etiqueta: 'Todos' },
-  { id: CATEGORIAS_BEBIDA.COCTEL_AUTOR, etiqueta: 'Firmas de la casa' },
+  { id: CATEGORIAS_BEBIDA.COCTEL_AUTOR, etiqueta: 'Firmas de Autor' },
   { id: CATEGORIAS_BEBIDA.DESTILADO_PREMIUM, etiqueta: 'Destilados Premium' },
-  { id: CATEGORIAS_BEBIDA.MOCKTAIL, etiqueta: 'Sin alcohol 0.0%' },
+  { id: CATEGORIAS_BEBIDA.MOCKTAIL, etiqueta: 'Mocktails 0.0%' },
   { id: CATEGORIAS_BEBIDA.BOTANICO, etiqueta: 'Mixología Botánica' },
 ];
 
@@ -186,7 +186,7 @@ export default function ModuloCarta({ terminoBusqueda }) {
               {/* Imagen y Badges */}
               <div className="relative h-[240px] sm:h-[260px] w-full bg-[#0D1525] overflow-hidden">
                 <img
-                  src={plato.imagenUrl}
+                  src={plato.imagenUrl || 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80'}
                   alt={plato.nombre}
                   className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${
                     estaAgotado ? 'grayscale contrast-125 opacity-40' : 'opacity-85'
