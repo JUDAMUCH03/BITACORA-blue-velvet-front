@@ -13,6 +13,7 @@ import {
   Twitter,
 } from 'lucide-react';
 import { BRAND } from '../../assets';
+import LogoBlueVelvet from './LogoBlueVelvet';
 
 export default function Footer() {
   return (
@@ -22,16 +23,14 @@ export default function Footer() {
           {/* COLUMNA 1: IDENTIDAD Y FILOSOFÍA */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-velvet-blue/60 border border-velvet-gold/40 text-velvet-gold font-serif font-bold text-base">
-                BV
-              </div>
+              <LogoBlueVelvet tamano={38} />
               <span className="font-serif text-xl font-bold tracking-wider text-white">
                 BLUE VELVET
               </span>
             </div>
             <p className="text-sm leading-relaxed text-slate-300">
-              Gastronomía de autor concebida como un arte sensorial. Cada plato es un diálogo íntimo
-              entre técnica contemporánea, producto de origen y estética refinada.
+              Coctelería de autor y mixología botánica concebida como un arte sensorial. Cada cóctel es un diálogo íntimo
+              entre técnica contemporánea, botánicos de origen y estética refinada.
             </p>
             <div className="flex items-center gap-3 text-velvet-gold text-xs tracking-wider uppercase font-semibold">
               <Award className="w-4 h-4 text-velvet-gold" />
