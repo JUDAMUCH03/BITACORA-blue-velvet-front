@@ -251,6 +251,21 @@ export const menuService = {
       throw error;
     }
   },
+
+  /**
+   * Elimina un cóctel de la carta en PostgreSQL (DELETE /api/v1/platos/{id})
+   * @param {string|number} id
+   * @returns {Promise<boolean>}
+   */
+  deleteMenuItem: async (id) => {
+    try {
+      await api.delete(`/platos/${id}`);
+      return true;
+    } catch (error) {
+      console.error(`[menuService] Error al eliminar cóctel #${id} en PostgreSQL:`, error);
+      throw error;
+    }
+  },
 };
 
 export default menuService;

@@ -106,9 +106,9 @@ const PLATOS_INICIALES = [
     categoria: CATEGORIAS_BEBIDA.MOCKTAIL,
     precio: 28000,
     descripcion: 'Hidrolatos botánicos de enebro sin alcohol, clarificado de cítricos y cordial de jazmín 0.0% ABV.',
-    graduacionAlcoholica: 0.0,
-    notasSensoriales: ['Fresco floral', 'Clarificado cítrico', 'Sedoso jazmín'],
-    cristaleria: 'Copa balón esmerilada',
+    graduacionAlcoholica: 0,
+    notasSensoriales: ['Jazmín sedoso', 'Enebro sutil', 'Final cítrico puro'],
+    cristaleria: 'Copa Nick & Nora congelada',
     disponible: true,
     imagenUrl: COCKTAIL_IMAGE_MAP[7],
     esAlcoholico: false,
@@ -119,9 +119,9 @@ const PLATOS_INICIALES = [
     categoria: CATEGORIAS_BEBIDA.BOTANICO,
     precio: 26000,
     descripcion: 'Infusión fría de romero silvestre, tónica artesanal de flor de sauco y perfume de bergamota.',
-    graduacionAlcoholica: 0.0,
-    notasSensoriales: ['Balsámico herbáceo', 'Sauco silvestre', 'Bergamota noble'],
-    cristaleria: 'Vaso Collins con varilla tallada',
+    graduacionAlcoholica: 0,
+    notasSensoriales: ['Romero fresco', 'Flor de sauco', 'Burbuja vivaz'],
+    cristaleria: 'Vaso Collins con púa botánica',
     disponible: true,
     imagenUrl: COCKTAIL_IMAGE_MAP[8],
     esAlcoholico: false,
@@ -129,74 +129,63 @@ const PLATOS_INICIALES = [
 ];
 
 const MESAS_INICIALES = [
-  { id: 1, numero: 1, capacidad: 2, estado: ESTADOS_MESA.DISPONIBLE, cuentaAbierta: false },
-  { id: 2, numero: 2, capacidad: 4, estado: ESTADOS_MESA.OCUPADA, cuentaAbierta: true, comandaActivaId: 101 },
-  { id: 3, numero: 3, capacidad: 2, estado: ESTADOS_MESA.DISPONIBLE, cuentaAbierta: false },
-  { id: 4, numero: 4, capacidad: 6, estado: ESTADOS_MESA.OCUPADA, cuentaAbierta: true, comandaActivaId: 102 },
-  { id: 5, numero: 5, capacidad: 4, estado: ESTADOS_MESA.DISPONIBLE, cuentaAbierta: false },
-  { id: 6, numero: 6, capacidad: 8, estado: ESTADOS_MESA.DISPONIBLE, cuentaAbierta: false, zona: 'Cava Privada' },
-  { id: 7, numero: 7, capacidad: 1, estado: ESTADOS_MESA.DISPONIBLE, cuentaAbierta: false, zona: 'Barra 1' },
-  { id: 8, numero: 8, capacidad: 1, estado: ESTADOS_MESA.DISPONIBLE, cuentaAbierta: false, zona: 'Barra 2' },
+  { id: 1, numero: 1, capacidad: 2, estado: ESTADOS_MESA.DISPONIBLE, zona: 'Terraza Botánica', cuentaAbierta: false },
+  { id: 2, numero: 2, capacidad: 4, estado: ESTADOS_MESA.OCUPADA, zona: 'Sala Principal Velvet', comandaActivaId: 501, cuentaAbierta: true },
+  { id: 3, numero: 3, capacidad: 4, estado: ESTADOS_MESA.DISPONIBLE, zona: 'Sala Principal Velvet', cuentaAbierta: false },
+  { id: 4, numero: 4, capacidad: 6, estado: ESTADOS_MESA.RESERVADA, zona: 'Cava Privada de Destilados', cuentaAbierta: false },
+  { id: 5, numero: 5, capacidad: 2, estado: ESTADOS_MESA.OCUPADA, zona: 'Barra de Autor (Front-Row)', comandaActivaId: 502, cuentaAbierta: true },
+  { id: 6, numero: 6, capacidad: 8, estado: ESTADOS_MESA.DISPONIBLE, zona: 'Cava Privada de Destilados', cuentaAbierta: false },
 ];
 
 const PEDIDOS_KDS_INICIALES = [
   {
-    id: 101,
+    id: 501,
     idMesa: 2,
     numeroMesa: 2,
     estado: ESTADOS_PEDIDO.EN_PREPARACION,
-    timestamp: new Date(Date.now() - 11 * 60000).toISOString(),
+    timestamp: new Date(Date.now() - 14 * 60000).toISOString(),
     items: [
       {
-        id: 201,
+        id: 101,
         idPlato: 1,
         nombrePlato: 'Smoked Old Fashioned',
         precioCongelado: 45000,
-        cantidad: 1,
-        spiritBrandId: 3,
-        nombreDestilado: "Maker's Mark Bourbon",
+        cantidad: 2,
+        spiritBrandId: 1,
+        nombreDestilado: 'Woodford Reserve Double Oaked',
         spiritModificationsCount: 0,
-        garnishes: ['Humo de roble en campana', 'Twist de naranja deshidratada'],
+        garnishes: [GUARNICIONES_BOTANICAS[0], GUARNICIONES_BOTANICAS[1]],
       },
       {
-        id: 202,
+        id: 102,
         idPlato: 7,
         nombrePlato: 'Velvet Cloud 0.0%',
         precioCongelado: 28000,
         cantidad: 1,
+        spiritBrandId: null,
+        nombreDestilado: null,
         spiritModificationsCount: 0,
-        garnishes: ['Pétalos de rosa comestibles'],
+        garnishes: [GUARNICIONES_BOTANICAS[2]],
       },
     ],
   },
   {
-    id: 102,
-    idMesa: 4,
-    numeroMesa: 4,
+    id: 502,
+    idMesa: 5,
+    numeroMesa: 5,
     estado: ESTADOS_PEDIDO.RECIBIDO,
     timestamp: new Date(Date.now() - 4 * 60000).toISOString(),
     items: [
       {
-        id: 203,
+        id: 103,
         idPlato: 2,
         nombrePlato: 'Velvet Negroni Botánico',
         precioCongelado: 42000,
         cantidad: 1,
-        spiritBrandId: 1,
-        nombreDestilado: "Hendrick's Gin",
+        spiritBrandId: 2,
+        nombreDestilado: 'Monkey 47 Schwarzwald Dry Gin',
         spiritModificationsCount: 0,
-        garnishes: ['Twist de naranja deshidratada', 'Rama de romero flameado'],
-      },
-      {
-        id: 204,
-        idPlato: 4,
-        nombrePlato: 'Mezcalita Floral Oaxaqueña',
-        precioCongelado: 40000,
-        cantidad: 1,
-        spiritBrandId: 5,
-        nombreDestilado: 'Mezcal 400 Conejos',
-        spiritModificationsCount: 0,
-        garnishes: ['Pétalos de rosa comestibles'],
+        garnishes: [GUARNICIONES_BOTANICAS[0]],
       },
     ],
   },
@@ -249,8 +238,21 @@ export function BlueVelvetProvider({ children }) {
         api.get('/pedidos'),
       ]);
 
-      if (resMenu.status === 'fulfilled' && Array.isArray(resMenu.value.data) && resMenu.value.data.length > 0) {
-        const platosEnriquecidos = resMenu.value.data.map((p) => ({
+      let platosCargados = null;
+      if (resMenu.status === 'fulfilled' && Array.isArray(resMenu.value?.data) && resMenu.value.data.length > 0) {
+        platosCargados = resMenu.value.data;
+      } else {
+        // Si /menu falla o no está expuesto, intentar /platos
+        try {
+          const resPlatos = await api.get('/platos');
+          if (Array.isArray(resPlatos.data) && resPlatos.data.length > 0) {
+            platosCargados = resPlatos.data;
+          }
+        } catch (_) {}
+      }
+
+      if (platosCargados) {
+        const platosEnriquecidos = platosCargados.map((p) => ({
           ...p,
           imagenUrl: p.imagenUrl || COCKTAIL_IMAGE_MAP[p.id] || DEFAULT_COCKTAIL_IMAGE,
           graduacionAlcoholica:
@@ -262,11 +264,11 @@ export function BlueVelvetProvider({ children }) {
         setPlatos(platosEnriquecidos);
       }
 
-      if (resMesas.status === 'fulfilled' && Array.isArray(resMesas.value.data) && resMesas.value.data.length > 0) {
+      if (resMesas.status === 'fulfilled' && Array.isArray(resMesas.value?.data) && resMesas.value.data.length > 0) {
         setMesas(resMesas.value.data);
       }
 
-      if (resPedidos.status === 'fulfilled' && Array.isArray(resPedidos.value.data) && resPedidos.value.data.length > 0) {
+      if (resPedidos.status === 'fulfilled' && Array.isArray(resPedidos.value?.data) && resPedidos.value.data.length > 0) {
         setPedidos(resPedidos.value.data);
       }
 
@@ -280,12 +282,11 @@ export function BlueVelvetProvider({ children }) {
         } catch (_) {}
       }
     } catch (err) {
-      console.warn('[BlueVelvetContext] Conexión en modo contingencia:', err);
-      dispararAlerta('Modo fuera de línea · Operando con datos locales de contingencia', 'ambar');
+      console.warn('[BlueVelvetContext] Conexión inicial al backend con advertencia:', err);
     } finally {
       setCargandoInicial(false);
     }
-  }, [rolActivo, dispararAlerta]);
+  }, [rolActivo]);
 
   useEffect(() => {
     cargarDatosIniciales();
@@ -312,7 +313,7 @@ export function BlueVelvetProvider({ children }) {
     setComandasBorrador((prev) => {
       const itemsActuales = prev[mesaId] || [];
       const nuevoItem = {
-        id: Date.now() + Math.random(),
+        id: Date.now(),
         idPlato: itemData.idPlato,
         nombrePlato: itemData.nombrePlato,
         precioCongelado: itemData.precioCongelado,
@@ -338,10 +339,12 @@ export function BlueVelvetProvider({ children }) {
 
   /**
    * 1. DESPACHO REAL DE COMANDAS (Sala ➔ Backend Spring Boot POST /pedidos)
+   * Si la API tiene éxito (201), actualiza el estado con el ID real de base de datos.
+   * Si falla, notifica el error en rojo y NO genera pedidos ficticios con Math.random.
    */
   const enviarComandaABarra = useCallback(async (mesaId) => {
     const mesa = mesas.find((m) => m.id === mesaId);
-    if (!mesa) return;
+    if (!mesa) return false;
 
     if (mesa.estado === ESTADOS_MESA.OCUPADA && mesa.comandaActivaId) {
       const pedidoExistente = pedidos.find(
@@ -349,14 +352,14 @@ export function BlueVelvetProvider({ children }) {
       );
       if (pedidoExistente) {
         dispararAlerta(`La mesa ${mesa.numero} ya cuenta con comanda #${pedidoExistente.id} abierta en servicio.`, 'carmesi');
-        return;
+        return false;
       }
     }
 
     const itemsBorrador = comandasBorrador[mesaId] || [];
     if (itemsBorrador.length === 0) {
       dispararAlerta(`No hay bebidas agregadas a la comanda de la mesa ${mesa.numero}.`, 'ambar');
-      return;
+      return false;
     }
 
     const payload = {
@@ -389,35 +392,12 @@ export function BlueVelvetProvider({ children }) {
       });
 
       dispararAlerta(`Comanda #${pedidoCreado.id} despachada a barra y persistida en BD.`, 'esmeralda');
+      return true;
     } catch (err) {
-      console.warn('[BlueVelvetContext] Fallback al persistir comanda:', err);
-      // Fallback local en caso de desconexión
-      const nuevoPedidoId = Math.floor(100 + Math.random() * 900);
-      const nuevoPedido = {
-        id: nuevoPedidoId,
-        idMesa: mesa.id,
-        numeroMesa: mesa.numero,
-        estado: ESTADOS_PEDIDO.RECIBIDO,
-        timestamp: new Date().toISOString(),
-        items: [...itemsBorrador],
-      };
-
-      setPedidos((prev) => [nuevoPedido, ...prev]);
-      setMesas((prev) =>
-        prev.map((m) =>
-          m.id === mesaId
-            ? { ...m, estado: ESTADOS_MESA.OCUPADA, cuentaAbierta: true, comandaActivaId: nuevoPedidoId }
-            : m
-        )
-      );
-
-      setComandasBorrador((prev) => {
-        const copia = { ...prev };
-        delete copia[mesaId];
-        return copia;
-      });
-
-      dispararAlerta(`Comanda #${nuevoPedidoId} enviada a barra (Modo local).`, 'ambar');
+      console.error('[BlueVelvetContext] Error al persistir comanda:', err);
+      const mensajeError = err.response?.data?.message || err.message || 'No se pudo registrar la comanda en la base de datos.';
+      dispararAlerta(`Error al persistir comanda: ${mensajeError}`, 'carmesi');
+      return false;
     }
   }, [mesas, pedidos, comandasBorrador, dispararAlerta]);
 
@@ -444,11 +424,9 @@ export function BlueVelvetProvider({ children }) {
       setPedidos((prev) => prev.map((p) => (p.id === pedidoId ? response.data : p)));
       dispararAlerta(`Comanda #${pedidoId} avanzó a ${siguienteEstado} (Persistido en KDS).`, 'esmeralda');
     } catch (err) {
-      console.warn('[BlueVelvetContext] Fallback al avanzar estado KDS:', err);
-      setPedidos((prev) =>
-        prev.map((p) => (p.id === pedidoId ? { ...p, estado: siguienteEstado } : p))
-      );
-      dispararAlerta(`Comanda #${pedidoId} avanzó a ${siguienteEstado} (Modo local).`, 'ambar');
+      console.error('[BlueVelvetContext] Error al avanzar estado KDS:', err);
+      const mensajeError = err.response?.data?.message || err.message || 'Error al actualizar estado en el servidor.';
+      dispararAlerta(`Fallo al actualizar comanda #${pedidoId}: ${mensajeError}`, 'carmesi');
     }
   }, [pedidos, dispararAlerta]);
 
@@ -460,7 +438,7 @@ export function BlueVelvetProvider({ children }) {
     if (!pedido) return;
 
     if (pedido.estado === ESTADOS_PEDIDO.EN_PREPARACION) {
-      dispararAlerta('Operación denegada (HTTP 422): La bebida está en preparación y es estrictamente inmutable.', 'carmesi');
+      dispararAlerta('Operación denegada (HTTP 422): La comanda está en preparación y es estrictamente inmutable.', 'carmesi');
       return;
     }
 
@@ -480,23 +458,9 @@ export function BlueVelvetProvider({ children }) {
       setPedidos((prev) => prev.map((p) => (p.id === pedidoId ? response.data : p)));
       dispararAlerta(`Destilado mutado a ${destiladoObj.nombre} (Persistido en PostgreSQL / MongoDB).`, 'esmeralda');
     } catch (err) {
-      console.warn('[BlueVelvetContext] Fallback al mutar destilado:', err);
-      setPedidos((prev) =>
-        prev.map((ped) => {
-          if (ped.id !== pedidoId) return ped;
-          const itemsActualizados = ped.items.map((it) => {
-            if (it.id !== itemId) return it;
-            return {
-              ...it,
-              spiritBrandId: destiladoObj.id,
-              nombreDestilado: destiladoObj.nombre,
-              spiritModificationsCount: (it.spiritModificationsCount || 0) + 1,
-            };
-          });
-          return { ...ped, items: itemsActualizados };
-        })
-      );
-      dispararAlerta(`Destilado actualizado a ${destiladoObj.nombre} (Modo local).`, 'ambar');
+      console.error('[BlueVelvetContext] Error al mutar destilado:', err);
+      const mensajeError = err.response?.data?.message || err.message || 'No se pudo mutar el destilado en el servidor.';
+      dispararAlerta(`Error al mutar destilado: ${mensajeError}`, 'carmesi');
     }
   }, [pedidos, dispararAlerta]);
 
@@ -524,15 +488,9 @@ export function BlueVelvetProvider({ children }) {
       );
       dispararAlerta(`Comanda #${pedidoId} cancelada en barra y mesa liberada.`, 'esmeralda');
     } catch (err) {
-      setPedidos((prev) => prev.filter((p) => p.id !== pedidoId));
-      setMesas((prev) =>
-        prev.map((m) =>
-          m.id === pedido.idMesa
-            ? { ...m, estado: ESTADOS_MESA.DISPONIBLE, cuentaAbierta: false, comandaActivaId: undefined }
-            : m
-        )
-      );
-      dispararAlerta(`Comanda #${pedidoId} cancelada localmente.`, 'ambar');
+      console.error('[BlueVelvetContext] Error al cancelar comanda:', err);
+      const mensajeError = err.response?.data?.message || err.message || 'No se pudo cancelar en el servidor.';
+      dispararAlerta(`Error al cancelar comanda: ${mensajeError}`, 'carmesi');
     }
   }, [pedidos, dispararAlerta]);
 
@@ -547,41 +505,46 @@ export function BlueVelvetProvider({ children }) {
 
     try {
       await api.post(`/cuentas/${idCuentaCerrar}/cerrar`);
-      const resMesas = await api.get('/mesas');
-      if (Array.isArray(resMesas.data)) {
-        setMesas(resMesas.data);
+      try {
+        const resMesas = await api.get('/mesas');
+        if (Array.isArray(resMesas.data)) {
+          setMesas(resMesas.data);
+        }
+      } catch (_) {
+        setMesas((prev) =>
+          prev.map((m) =>
+            m.id === mesaId
+              ? { ...m, estado: ESTADOS_MESA.DISPONIBLE, cuentaAbierta: false, comandaActivaId: undefined }
+              : m
+          )
+        );
       }
-      dispararAlerta(`Cuenta Mesa ${mesa.numero} liquidada en el servidor. Mesa liberada en PostgreSQL.`, 'esmeralda');
+
+      const pedidoActivo = pedidos.find((p) => p.idMesa === mesaId && p.estado !== ESTADOS_PEDIDO.CANCELADO);
+      if (pedidoActivo) {
+        setPedidos((prev) =>
+          prev.map((p) => (p.id === pedidoActivo.id ? { ...p, estado: ESTADOS_PEDIDO.ENTREGADO } : p))
+        );
+      }
+
+      setComandasBorrador((prev) => {
+        const copia = { ...prev };
+        delete copia[mesaId];
+        return copia;
+      });
+
+      dispararAlerta(`Cuenta Mesa ${mesa.numero} liquidada exitosamente. Mesa liberada en PostgreSQL.`, 'esmeralda');
+      return {
+        exito: true,
+        mesaNumero: mesa.numero,
+        fecha: new Date().toLocaleString(),
+      };
     } catch (err) {
-      console.warn('[BlueVelvetContext] Fallback al liquidar cuenta:', err);
-      setMesas((prev) =>
-        prev.map((m) =>
-          m.id === mesaId
-            ? { ...m, estado: ESTADOS_MESA.DISPONIBLE, cuentaAbierta: false, comandaActivaId: undefined }
-            : m
-        )
-      );
-      dispararAlerta(`Cuenta Mesa ${mesa.numero} liquidada (Modo local). Mesa liberada.`, 'ambar');
+      console.error('[BlueVelvetContext] Error al liquidar cuenta:', err);
+      const mensajeError = err.response?.data?.message || err.message || 'Error al liquidar cuenta en Azure.';
+      dispararAlerta(`Error al liquidar cuenta de Mesa ${mesa.numero}: ${mensajeError}`, 'carmesi');
+      return { exito: false, error: mensajeError };
     }
-
-    const pedidoActivo = pedidos.find((p) => p.idMesa === mesaId && p.estado !== ESTADOS_PEDIDO.CANCELADO);
-    if (pedidoActivo) {
-      setPedidos((prev) =>
-        prev.map((p) => (p.id === pedidoActivo.id ? { ...p, estado: ESTADOS_PEDIDO.ENTREGADO } : p))
-      );
-    }
-
-    setComandasBorrador((prev) => {
-      const copia = { ...prev };
-      delete copia[mesaId];
-      return copia;
-    });
-
-    return {
-      exito: true,
-      mesaNumero: mesa.numero,
-      fecha: new Date().toLocaleString(),
-    };
   }, [mesas, pedidos, dispararAlerta]);
 
   /**
@@ -604,16 +567,16 @@ export function BlueVelvetProvider({ children }) {
       );
       dispararAlerta(`${plato.nombre} ahora está ${nuevoEstado ? 'DISPONIBLE' : 'AGOTADO EN BARRA'} (Persistido en BD).`, nuevoEstado ? 'esmeralda' : 'ambar');
     } catch (err) {
-      console.warn('[BlueVelvetContext] Fallback al alternar stock:', err);
-      setPlatos((prev) =>
-        prev.map((p) => (p.id === platoId ? { ...p, disponible: nuevoEstado } : p))
-      );
-      dispararAlerta(`${plato.nombre} cambiado a ${nuevoEstado ? 'DISPONIBLE' : 'AGOTADO EN BARRA'} (Modo local).`, nuevoEstado ? 'esmeralda' : 'ambar');
+      console.error('[BlueVelvetContext] Error al alternar stock:', err);
+      const mensajeError = err.response?.data?.message || err.message || 'No se pudo actualizar stock en el servidor.';
+      dispararAlerta(`Error al actualizar stock: ${mensajeError}`, 'carmesi');
     }
   }, [rolActivo, platos, dispararAlerta]);
 
   /**
    * 6. CREAR NUEVO CÓCTEL EN CATÁLOGO (Backend POST /platos)
+   * Si tiene éxito (201), actualiza con el ID numérico real generado por PostgreSQL.
+   * Si falla, notifica el error en rojo y NO genera objetos en memoria con Date.now().
    */
   const crearPlato = useCallback(async (nuevoPlato) => {
     const esAutorizado =
@@ -648,6 +611,8 @@ export function BlueVelvetProvider({ children }) {
 
     try {
       const response = await api.post('/platos', payload);
+      const platoPersistidoBackend = response.data;
+
       // Sincronización inmediata con PostgreSQL (GET /platos)
       try {
         const resPlatos = await api.get('/platos');
@@ -664,7 +629,7 @@ export function BlueVelvetProvider({ children }) {
           setPlatos(platosEnriquecidos);
         } else {
           const platoPersistido = {
-            ...response.data,
+            ...platoPersistidoBackend,
             graduacionAlcoholica: Number(nuevoPlato.graduacionAlcoholica) || 0,
             notasSensoriales: nuevoPlato.notasSensoriales || ['Perfil botánico exclusivo'],
             cristaleria: nuevoPlato.cristaleria || 'Copa sugerida de la casa',
@@ -675,7 +640,7 @@ export function BlueVelvetProvider({ children }) {
         }
       } catch {
         const platoPersistido = {
-          ...response.data,
+          ...platoPersistidoBackend,
           graduacionAlcoholica: Number(nuevoPlato.graduacionAlcoholica) || 0,
           notasSensoriales: nuevoPlato.notasSensoriales || ['Perfil botánico exclusivo'],
           cristaleria: nuevoPlato.cristaleria || 'Copa sugerida de la casa',
@@ -684,28 +649,20 @@ export function BlueVelvetProvider({ children }) {
         };
         setPlatos((prev) => [platoPersistido, ...prev]);
       }
-      dispararAlerta(`Cóctel "${nuevoPlato.nombre}" creado y persistido en la base de datos PostgreSQL.`, 'esmeralda');
+
+      dispararAlerta(`Cóctel "${platoPersistidoBackend?.nombre || nuevoPlato.nombre}" creado y persistido en la base de datos PostgreSQL.`, 'esmeralda');
       return true;
     } catch (err) {
-      console.warn('[BlueVelvetContext] Fallback al crear plato:', err);
-      const platoFallback = {
-        id: Date.now(),
-        ...payload,
-        disponible: true,
-        graduacionAlcoholica: Number(nuevoPlato.graduacionAlcoholica) || 0,
-        notasSensoriales: nuevoPlato.notasSensoriales || ['Perfil botánico exclusivo'],
-        cristaleria: nuevoPlato.cristaleria || 'Copa sugerida de la casa',
-        esAlcoholico: nuevoPlato.categoria !== CATEGORIAS_BEBIDA.MOCKTAIL && nuevoPlato.categoria !== CATEGORIAS_BEBIDA.BOTANICO,
-        imagenUrl: nuevoPlato.imagenUrl || DEFAULT_COCKTAIL_IMAGE,
-      };
-      setPlatos((prev) => [platoFallback, ...prev]);
-      dispararAlerta(`Cóctel "${platoFallback.nombre}" incorporado (Modo local).`, 'ambar');
-      return true;
+      console.error('[BlueVelvetContext] Error persistiendo plato en backend:', err);
+      const mensajeError = err.response?.data?.message || err.message || 'Error al persistir el cóctel en la base de datos PostgreSQL.';
+      dispararAlerta(`Error al guardar cóctel: ${mensajeError}`, 'carmesi');
+      return false;
     }
   }, [rolActivo, dispararAlerta]);
 
   /**
    * 7. ELIMINAR CÓCTEL DEL CATÁLOGO (Backend DELETE /platos/{id})
+   * Si tiene éxito, remueve el registro del estado. Si falla, alerta el error en rojo.
    */
   const eliminarPlato = useCallback(async (platoId) => {
     const esAutorizado =
@@ -727,10 +684,10 @@ export function BlueVelvetProvider({ children }) {
       dispararAlerta(`Cóctel "${nombrePlato}" eliminado de la base de datos PostgreSQL.`, 'esmeralda');
       return true;
     } catch (err) {
-      console.warn('[BlueVelvetContext] Fallback al eliminar plato:', err);
-      setPlatos((prev) => prev.filter((p) => p.id !== platoId));
-      dispararAlerta(`Cóctel "${nombrePlato}" removido del catálogo (Modo local).`, 'ambar');
-      return true;
+      console.error('[BlueVelvetContext] Error eliminando plato en backend:', err);
+      const mensajeError = err.response?.data?.message || err.message || 'No se pudo eliminar el cóctel en el servidor.';
+      dispararAlerta(`Error al eliminar cóctel: ${mensajeError}`, 'carmesi');
+      return false;
     }
   }, [rolActivo, platos, dispararAlerta]);
 
