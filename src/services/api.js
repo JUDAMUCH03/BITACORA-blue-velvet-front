@@ -2,11 +2,9 @@ import axios from 'axios';
 
 /**
  * Constantes de configuración de la API y llaves de almacenamiento
- * En producción (Vercel), utiliza '/api/v1' aprovechando el rewrite proxy de vercel.json hacia Azure.
+ * En producción (Vercel), utiliza '/api/v1' aprovechando el reverse proxy de vercel.json.
  */
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.PROD ? '/api/v1' : 'http://localhost:8080/api/v1');
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 export const TOKEN_STORAGE_KEY = 'blue_velvet_token';
 export const USER_STORAGE_KEY = 'blue_velvet_user';
@@ -14,20 +12,19 @@ export const USER_STORAGE_KEY = 'blue_velvet_user';
 /**
  * Instancia centralizada de Axios para la comunicación con Spring Boot 3
  */
-const api = axios.create({
+const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 8000,
   headers: {
     'Content-Type': 'application/json',
-    Accept: 'application/json',
   },
+  timeout: 15000,
 });
 
 /**
  * Interceptor de Solicitudes (Request Interceptor)
  * Inyecta el token Bearer JWT en las cabeceras de autorización si existe.
  */
-api.interceptors.request.use(
+apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem(TOKEN_STORAGE_KEY);
     if (token) {
@@ -43,9 +40,9 @@ api.interceptors.request.use(
 
 /**
  * Interceptor de Respuestas (Response Interceptor)
- * Manejo centralizado de errores HTTP 401 (desautorizado) y normalización de mensajes de error.
+ * Manejo centralizado de 401 (desautorizado) y propagación estricta de errores HTTP.
  */
-api.interceptors.response.use(
+apiClient.interceptors.response.use(
   (response) => {
     return response;
   },
@@ -63,18 +60,16 @@ api.interceptors.response.use(
         }
       }
 
-      // Normalizar mensaje de error desde el backend de Spring Boot
+      // Normalizar mensaje de error manteniendo la estructura de error
       const errorMessage =
         data?.message ||
         data?.error ||
         `Error HTTP ${status}: ${error.response.statusText || 'Error en la petición'}`;
 
-      const normalizedError = new Error(errorMessage);
-      normalizedError.status = status;
-      normalizedError.data = data;
-      return Promise.reject(normalizedError);
+      error.message = errorMessage;
+      return Promise.reject(error);
     } else if (error.request) {
-      // Petición realizada pero sin respuesta (timeout, servidor apagado o falla de red)
+      // Petición realizada pero sin respuesta (timeout o falla de red)
       const networkError = new Error(
         'No se pudo establecer conexión con el backend de Blue Velvet o se agotó el tiempo de espera.'
       );
@@ -86,4 +81,5 @@ api.interceptors.response.use(
   }
 );
 
-export default api;
+export const api = apiClient;
+export default apiClient;
