@@ -14,6 +14,7 @@ import {
   Quote,
   CheckCircle2,
 } from 'lucide-react';
+import LogoBlueVelvet from '../components/common/LogoBlueVelvet';
 
 export default function LandingPage() {
   const pillars = [
@@ -80,18 +81,23 @@ export default function LandingPage() {
         </div>
 
         <div className="relative max-w-5xl mx-auto text-center space-y-8">
+          {/* Logotipo Oficial */}
+          <div className="flex justify-center mb-2">
+            <LogoBlueVelvet tamano={84} />
+          </div>
+
           {/* Badge de Categoría & Reconocimiento */}
           <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-velvet-800/80 border border-velvet-gold/30 backdrop-blur-md shadow-sm">
             <Sparkles className="w-4 h-4 text-velvet-gold animate-spin-slow" />
             <span className="text-xs uppercase tracking-[0.2em] font-semibold text-velvet-gold-light">
-              Gastronomía de Autor & Alta Cocina Sensorial
+              Mixología de Autor & Coctelería Sensorial
             </span>
           </div>
 
           {/* Titular Principal Persuasivo */}
           <h1 className="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold text-white tracking-tight leading-[1.15]">
-            Una experiencia culinaria sensorial en{' '}
-            <span className="text-gold-gradient block sm:inline">cada bocado</span>
+            Una experiencia botánica y sensorial en{' '}
+            <span className="text-gold-gradient block sm:inline">cada copa</span>
           </h1>
 
           {/* Subtítulo con Propuesta de Valor Clara */}

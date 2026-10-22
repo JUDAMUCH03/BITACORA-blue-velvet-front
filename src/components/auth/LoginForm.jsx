@@ -43,13 +43,13 @@ export default function LoginForm() {
 
   const handleQuickFill = (role) => {
     if (role === 'admin') {
-      setCorreo('admin@bluevelvet.rest');
-      setPassword('AdminPass2026!');
-      setNombre('Staff Blue Velvet');
+      setCorreo('admin@bluevelvet.com');
+      setPassword('admin123');
+      setNombre('Staff Administrador');
     } else {
-      setCorreo('cliente.vip@gmail.com');
-      setPassword('ClientePass2026!');
-      setNombre('Valeria Mendoza');
+      setCorreo('cliente@bluevelvet.com');
+      setPassword('cliente123');
+      setNombre('Cliente Blue Velvet');
     }
   };
 

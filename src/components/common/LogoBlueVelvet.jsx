@@ -1,20 +1,35 @@
 import React, { useState } from 'react';
 
 /**
- * Logotipo Oficial de Blue Velvet con fallback automático resiliente
+ * Rutas de búsqueda prioritarias para el logotipo oficial de Blue Velvet
+ */
+const POSIBLES_RUTAS_LOGO = [
+  '/logo.png',
+  '/logo.svg',
+  '/logo.webp',
+  '/logo.jpg',
+  '/src/assets/logo.png',
+  '/src/assets/logo.svg',
+  '/src/assets/logo.webp',
+  '/src/assets/logo.jpg',
+];
+
+/**
+ * Logotipo Oficial de Blue Velvet con detección automática de formatos y fallback vectorial de lujo
  * @param {{ tamano?: number, clase?: string }} props
  */
 export default function LogoBlueVelvet({ tamano = 48, clase = '' }) {
-  const [errorCarga, setErrorCarga] = useState(false);
+  const [indiceRuta, setIndiceRuta] = useState(0);
 
-  // Intentar cargar la ruta oficial especificada en el requerimiento
-  const rutaOficial = '/src/imports/ChatGPT_Image_3_sept_2026__02_15_32_p.m..png';
+  const manejarError = () => {
+    setIndiceRuta((prev) => prev + 1);
+  };
 
-  if (!errorCarga) {
+  if (indiceRuta < POSIBLES_RUTAS_LOGO.length) {
     return (
       <img
-        src={rutaOficial}
-        onError={() => setErrorCarga(true)}
+        src={POSIBLES_RUTAS_LOGO[indiceRuta]}
+        onError={manejarError}
         alt="Blue Velvet — Coctelería de Autor"
         style={{
           width: `${tamano}px`,

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Key, ShieldCheck, ArrowRight, Loader2, AlertCircle, CheckCircle2, User } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import LogoBlueVelvet from '../components/common/LogoBlueVelvet';
 
 export default function LoginPage() {
   const [correo, setCorreo] = useState('');
@@ -83,6 +84,10 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8">
         {/* Encabezado */}
         <div className="text-center space-y-3">
+          <div className="flex justify-center mb-3">
+            <LogoBlueVelvet tamano={72} />
+          </div>
+
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-velvet-800 border border-velvet-gold/30 text-xs font-semibold text-velvet-gold">
             <Key className="w-3.5 h-3.5" />
             <span>Acceso Seguro Bearer JWT</span>
@@ -94,7 +99,7 @@ export default function LoginPage() {
 
           <p className="text-slate-300 text-xs sm:text-sm font-light">
             Inicia sesión para gestionar tus reservas, consultar la carta exclusiva y personalizar tu
-            experiencia gastronómica.
+            experiencia en barra y sala.
           </p>
         </div>
 

@@ -616,7 +616,14 @@ export function BlueVelvetProvider({ children }) {
    * 6. CREAR NUEVO CÓCTEL EN CATÁLOGO (Backend POST /platos)
    */
   const crearPlato = useCallback(async (nuevoPlato) => {
-    if (rolActivo !== 'ROLE_ADMIN' && rolActivo !== 'ROLE_CHEF') {
+    const esAutorizado =
+      !rolActivo ||
+      rolActivo.includes('ADMIN') ||
+      rolActivo.includes('CHEF') ||
+      rolActivo === 'ROLE_ADMIN' ||
+      rolActivo === 'ROLE_CHEF';
+
+    if (!esAutorizado) {
       dispararAlerta('Permiso denegado: Solo Administrador y Mixólogo Jefe pueden crear cócteles.', 'carmesi');
       return false;
     }

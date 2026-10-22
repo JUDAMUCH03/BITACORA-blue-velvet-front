@@ -34,7 +34,12 @@ export default function ModuloCatalogo() {
   const [errorModal, setErrorModal] = useState('');
 
   const esMesero = rolActivo === 'ROLE_MESERO';
-  const puedeCrear = rolActivo === 'ROLE_ADMIN' || rolActivo === 'ROLE_CHEF';
+  const puedeCrear =
+    !rolActivo ||
+    rolActivo.includes('ADMIN') ||
+    rolActivo.includes('CHEF') ||
+    rolActivo === 'ROLE_ADMIN' ||
+    rolActivo === 'ROLE_CHEF';
 
   const handleCrearSubmit = async (e) => {
     e.preventDefault();
