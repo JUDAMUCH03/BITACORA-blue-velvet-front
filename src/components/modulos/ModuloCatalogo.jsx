@@ -36,7 +36,7 @@ export default function ModuloCatalogo() {
   const esMesero = rolActivo === 'ROLE_MESERO';
   const puedeCrear = rolActivo === 'ROLE_ADMIN' || rolActivo === 'ROLE_CHEF';
 
-  const handleCrearSubmit = (e) => {
+  const handleCrearSubmit = async (e) => {
     e.preventDefault();
     setErrorModal('');
 
@@ -45,7 +45,7 @@ export default function ModuloCatalogo() {
       return;
     }
 
-    const exito = crearPlato({
+    const exito = await crearPlato({
       nombre: nuevoNombre,
       categoria: nuevaCategoria,
       precio: nuevoPrecio,
@@ -174,7 +174,7 @@ export default function ModuloCatalogo() {
                       <td className="py-3.5 px-3">
                         <div className="flex items-center gap-3">
                           <img
-                            src={plato.imagenUrl}
+                            src={plato.imagenUrl || 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80'}
                             alt={plato.nombre}
                             className="w-9 h-9 rounded-lg object-cover border border-borde shrink-0"
                           />
@@ -354,9 +354,9 @@ export default function ModuloCatalogo() {
                     onChange={(e) => setNuevaCategoria(e.target.value)}
                     className="w-full bg-[#0D1525] border border-borde rounded-xl px-4 py-2.5 text-xs text-texto focus:outline-none focus:border-oro"
                   >
-                    <option value={CATEGORIAS_BEBIDA.COCTEL_AUTOR}>Firmas de la casa (COCTEL_AUTOR)</option>
-                    <option value={CATEGORIAS_BEBIDA.DESTILADO_PREMIUM}>Destilado Premium</option>
-                    <option value={CATEGORIAS_BEBIDA.MOCKTAIL}>Sin alcohol 0.0% (MOCKTAIL)</option>
+                    <option value={CATEGORIAS_BEBIDA.COCTEL_AUTOR}>Firmas de Autor (COCTEL_AUTOR)</option>
+                    <option value={CATEGORIAS_BEBIDA.DESTILADO_PREMIUM}>Destilados Premium (DESTILADO_PREMIUM)</option>
+                    <option value={CATEGORIAS_BEBIDA.MOCKTAIL}>Mocktails 0.0% (MOCKTAIL)</option>
                     <option value={CATEGORIAS_BEBIDA.BOTANICO}>Mixología Botánica (BOTANICO)</option>
                   </select>
                 </div>

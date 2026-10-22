@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, CalendarCheck, Loader2, UtensilsCrossed, AlertCircle, RefreshCw } from 'lucide-react';
+import { Sparkles, CalendarCheck, Loader2, Wine, AlertCircle, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useMenu, MENU_CATEGORIES } from '../hooks/useMenu';
 import MenuFilter from '../components/menu/MenuFilter';
@@ -14,16 +14,16 @@ export default function MenuPage() {
       <div className="text-center space-y-4 max-w-3xl mx-auto">
         <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-velvet-800 border border-velvet-gold/30 text-xs font-semibold text-velvet-gold">
           <Sparkles className="w-3.5 h-3.5" />
-          <span>Gastronomía Sensorial de Autor & Precios en $COP</span>
+          <span>Mixología Sensorial & Coctelería de Autor · Precios en $COP</span>
         </div>
 
         <h1 className="font-serif text-4xl sm:text-5xl font-bold text-white tracking-tight">
-          Nuestra Carta de Temporada
+          Nuestra Carta de Coctelería de Autor
         </h1>
 
         <p className="text-slate-300 text-sm sm:text-base font-light leading-relaxed">
-          Cada preparación es un diálogo entre técnica de vanguardia, producto seleccionado de origen
-          y estética refinada. Explora nuestras creaciones y preselecciona tus favoritas para tu reserva.
+          Cada formulación es un diálogo entre técnica de vanguardia, botánicos seleccionados de origen
+          y destilados premium. Explora nuestras creaciones y preselecciona tus cócteles favoritos.
         </p>
       </div>
 
@@ -59,7 +59,7 @@ export default function MenuPage() {
           <div className="py-8 flex flex-col items-center justify-center space-y-2 text-velvet-gold">
             <Loader2 className="w-8 h-8 animate-spin" />
             <span className="text-xs uppercase tracking-widest text-slate-400">
-              Preparando la carta gastronómica...
+              Preparando la carta de autor...
             </span>
           </div>
 
@@ -84,24 +84,24 @@ export default function MenuPage() {
         /* MANEJO DE ESTADO VACÍO AMIGABLE */
         <div className="py-20 text-center velvet-glass rounded-3xl max-w-xl mx-auto p-8 space-y-4 border border-white/10">
           <div className="w-14 h-14 rounded-full bg-velvet-800 border border-velvet-gold/30 flex items-center justify-center text-velvet-gold mx-auto">
-            <UtensilsCrossed className="w-6 h-6" />
+            <Wine className="w-6 h-6" />
           </div>
           <h3 className="font-serif text-xl font-bold text-white">
-            No se encontraron platos en esta categoría
+            No se encontraron cócteles en esta categoría
           </h3>
           <p className="text-xs text-slate-300">
-            Nuestros chefs renuevan continuamente las recetas de temporada. Por favor selecciona otra categoría o revisa la carta completa.
+            Nuestros maestros mixólogos renuevan continuamente las recetas botánicas. Por favor selecciona otra categoría o revisa la carta completa.
           </p>
           <button
             type="button"
             onClick={() => setActiveCategory('TODOS')}
             className="px-6 py-2.5 rounded-full bg-velvet-gold text-velvet-900 font-bold text-xs shadow-gold-glow hover:scale-105 transition-transform"
           >
-            Ver todos los platos
+            Ver todas las creaciones
           </button>
         </div>
       ) : (
-        /* CUADRÍCULA DE PLATOS CON MENUCARD */
+        /* CUADRÍCULA DE CÓCTELES CON MENUCARD */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {items.map((dish) => (
             <MenuCard key={dish.id || dish._id} item={dish} />
@@ -116,7 +116,7 @@ export default function MenuPage() {
             ¿Deseas degustar estas creaciones de autor?
           </h3>
           <p className="text-xs sm:text-sm text-slate-300">
-            Reserva tu mesa en línea para garantizar disponibilidad y maridaje sugerido por nuestro sommelier.
+            Reserva tu mesa en línea para garantizar disponibilidad y asesoría personalizada de nuestro mixólogo jefe.
           </p>
         </div>
 

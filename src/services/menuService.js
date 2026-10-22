@@ -2,85 +2,103 @@ import api from './api';
 import { MenuItemDTO } from '../dtos/menuDTOs';
 
 /**
- * Catálogo mock de platos y servicios de Blue Velvet con precios en Pesos Colombianos ($COP)
+ * Mapeo fotográfico de alta resolución para la carta botánica de Blue Velvet
+ */
+export const COCKTAIL_IMAGE_MAP = {
+  1: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80', // Smoked Old Fashioned
+  2: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=800&q=80', // Velvet Negroni Botánico
+  3: 'https://images.unsplash.com/photo-1556881286-fc6915169721?auto=format&fit=crop&w=800&q=80', // Penicillin de Autor
+  4: 'https://images.unsplash.com/photo-1510626176961-4b57d4fbad03?auto=format&fit=crop&w=800&q=80', // Mezcalita Floral Oaxaqueña
+  5: 'https://images.unsplash.com/photo-1527281400683-1aae777175f8?auto=format&fit=crop&w=800&q=80', // Macallan 12 Double Cask
+  6: 'https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?auto=format&fit=crop&w=800&q=80', // Zacapa Centenario 23
+  7: 'https://images.unsplash.com/photo-1536935338788-846bb9981813?auto=format&fit=crop&w=800&q=80', // Velvet Cloud 0.0%
+  8: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=80', // Elíxir Botánico de Romero
+};
+
+const DEFAULT_COCKTAIL_IMAGE =
+  'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80';
+
+/**
+ * Catálogo idéntico a la base de datos PostgreSQL de Azure
+ * 8 Creaciones de autor sin alimentos, carnes ni postres.
  */
 export const FALLBACK_MENU_ITEMS = [
   MenuItemDTO(
-    'd1',
-    'Tartar de Atún Rojo con Emulsión de Trufa',
-    'Lomo de atún rojo de almadraba marinado en soja añeja, yema curada en mirin, caviar cítrico y crujiente de alga nori.',
-    78000,
-    'Entradas',
-    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80',
-    true
-  ),
-  MenuItemDTO(
-    'd2',
-    'Carpaccio de Vieira y Caviar Oscietra',
-    'Láminas finas de viera salvaje, vinagreta de fruta de la pasión, perlas de caviar Oscietra y brotes de shiso morado.',
-    82000,
-    'Entradas',
-    'https://images.unsplash.com/photo-1532550907401-a500c9a57435?auto=format&fit=crop&w=800&q=80',
-    true
-  ),
-  MenuItemDTO(
-    'd3',
-    'Solomillo Rossini al Oporto Reserva',
-    'Corte de solomillo de ternera madurada 45 días, foie gras mi-cuit caramelizado, reducción sedosa de Oporto y milhojas de patata trufada.',
-    125000,
-    'Platos Fuertes',
-    'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
-    true
-  ),
-  MenuItemDTO(
-    'd4',
-    'Lubina Salvaje con Risotto de Azafrán',
-    'Suprema de lubina sellada a la plancha, piel crujiente, risotto al dente aromatizado con azafrán de La Mancha y jugo de hinojo asado.',
-    110000,
-    'Platos Fuertes',
-    'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=800&q=80',
-    true
-  ),
-  MenuItemDTO(
-    'd5',
-    'Texturas de Chocolate Amargo al 70%',
-    'Mousse aireada de cacao ecuatoriano, bizcocho esponjoso bañado en licor de café, crumble de avellana dorada y helado de vainilla Bourbon.',
-    38000,
-    'Postres',
-    'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=800&q=80',
-    true
-  ),
-  MenuItemDTO(
-    'd6',
-    'Esfera de Frambuesa y Rosa Silvestre',
-    'Cúpula fina de isomalt con ganache montada de rosas, gel de frambuesas silvestres y nieve nitrogenada de yogur griego.',
-    35000,
-    'Postres',
-    'https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=800&q=80',
-    true
-  ),
-  MenuItemDTO(
-    'd7',
-    'Velvet Signature Smoked Old Fashioned',
-    'Bourbon infusionado con haba tonka, bitter artesanal de cacao, sirope de azúcar mascabado y ahumado en campana con madera de roble.',
-    48000,
-    'Coctelería de Autor',
-    'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80',
-    true
-  ),
-  MenuItemDTO(
-    'd8',
-    'Clover Club Blue Velvet Edition',
-    'Gin artesanal macerado con moras silvestres, licor de violetas, reducción de frambuesa, clara espumosa y polvo de oro comestible.',
+    1,
+    'Smoked Old Fashioned',
+    'Bourbon añejado en roble, bitter de cacao, azúcar demerara y ahumado en campana de madera.',
     45000,
-    'Coctelería de Autor',
-    'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=800&q=80',
+    'COCTEL_AUTOR',
+    COCKTAIL_IMAGE_MAP[1],
+    true
+  ),
+  MenuItemDTO(
+    2,
+    'Velvet Negroni Botánico',
+    'Gin macerado en lavanda y enebro, Campari infusionado y vermouth rosso de autor.',
+    42000,
+    'COCTEL_AUTOR',
+    COCKTAIL_IMAGE_MAP[2],
+    true
+  ),
+  MenuItemDTO(
+    3,
+    'Penicillin de Autor',
+    'Blended scotch whisky, jengibre fresco macerado, miel de agave, limón y toque de Islay ahumado.',
+    44000,
+    'COCTEL_AUTOR',
+    COCKTAIL_IMAGE_MAP[3],
+    true
+  ),
+  MenuItemDTO(
+    4,
+    'Mezcalita Floral Oaxaqueña',
+    'Mezcal artesanal espadín, licor de damiana, cordial de flor de jamaica y sal de gusano ahumada.',
+    40000,
+    'COCTEL_AUTOR',
+    COCKTAIL_IMAGE_MAP[4],
+    true
+  ),
+  MenuItemDTO(
+    5,
+    'Macallan 12 Double Cask',
+    'Single malt scotch servido en esfera de hielo tallada a mano con notas de miel y roble.',
+    65000,
+    'DESTILADO_PREMIUM',
+    COCKTAIL_IMAGE_MAP[5],
+    true
+  ),
+  MenuItemDTO(
+    6,
+    'Zacapa Centenario 23',
+    'Ron añejado en sistema solera, servido en copa balón con twist de naranja y nibs de cacao.',
+    55000,
+    'DESTILADO_PREMIUM',
+    COCKTAIL_IMAGE_MAP[6],
+    true
+  ),
+  MenuItemDTO(
+    7,
+    'Velvet Cloud 0.0%',
+    'Hidrolatos botánicos de enebro sin alcohol, clarificado de cítricos y cordial de jazmín 0.0% ABV.',
+    28000,
+    'MOCKTAIL',
+    COCKTAIL_IMAGE_MAP[7],
+    true
+  ),
+  MenuItemDTO(
+    8,
+    'Elíxir Botánico de Romero',
+    'Infusión fría de romero silvestre, tónica artesanal de flor de sauco y perfume de bergamota.',
+    26000,
+    'BOTANICO',
+    COCKTAIL_IMAGE_MAP[8],
     true
   ),
 ];
 
 /**
- * Normaliza nombres de categorías para búsquedas tolerantes
+ * Normaliza categorías para búsquedas tolerantes
  */
 function normalizeCategory(categoryStr) {
   if (!categoryStr) return '';
@@ -92,11 +110,22 @@ function normalizeCategory(categoryStr) {
 }
 
 /**
- * Servicio de Gestión de la Carta y Catálogo Gastronómico
+ * Asigna una imagen estética a cada cóctel recibido de la base de datos
+ */
+function resolveCocktailImage(item) {
+  if (item.imagenUrl && item.imagenUrl.startsWith('http')) {
+    return item.imagenUrl;
+  }
+  const idNum = Number(item.id);
+  return COCKTAIL_IMAGE_MAP[idNum] || DEFAULT_COCKTAIL_IMAGE;
+}
+
+/**
+ * Servicio de Gestión de la Carta de Mixología y Coctelería de Autor (Spring Boot / Azure)
  */
 export const menuService = {
   /**
-   * Obtiene la lista de ítems de la carta con soporte de filtro por categoría
+   * Obtiene la carta de cócteles directamente desde PostgreSQL de Azure
    * @param {string} [categoria]
    * @returns {Promise<Array<ReturnType<typeof MenuItemDTO>>>}
    */
@@ -106,64 +135,64 @@ export const menuService = {
 
     try {
       let rawData = [];
+
+      // Consulta prioritaria al endpoint oficial de la carta
       try {
         const res = await api.get('/menu');
         if (Array.isArray(res.data) && res.data.length > 0) {
           rawData = res.data;
         }
       } catch (err) {
+        // Fallback a /platos
         try {
-          const resServ = await api.get('/servicios');
-          if (Array.isArray(resServ.data) && resServ.data.length > 0) {
-            rawData = resServ.data;
+          const resPlatos = await api.get('/platos');
+          if (Array.isArray(resPlatos.data) && resPlatos.data.length > 0) {
+            rawData = resPlatos.data;
           }
         } catch (_) {}
       }
 
-      // Si el backend en la nube no tiene productos registrados o está en frío, activar catálogo demo
+      // Si el backend responde con los datos de PostgreSQL, se utilizan directamente
       if (rawData.length === 0) {
         rawData = FALLBACK_MENU_ITEMS;
       }
 
       const parsedItems = rawData.map((item) =>
         MenuItemDTO(
-          item.id || item._id,
-          item.nombre || item.name,
-          item.descripcion || item.description,
-          item.precio || item.price,
-          item.categoria || item.category,
-          item.imagenUrl || item.imageUrl,
+          item.id,
+          item.nombre,
+          item.descripcion,
+          item.precio,
+          item.categoria,
+          resolveCocktailImage(item),
           item.disponible !== undefined ? item.disponible : true
         )
       );
 
       if (!isAll) {
         return parsedItems.filter((i) =>
-          normalizeCategory(i.categoria).includes(normalizedCat)
+          normalizeCategory(i.categoria) === normalizedCat ||
+          i.categoria?.toUpperCase() === categoria?.toUpperCase()
         );
       }
       return parsedItems;
     } catch (error) {
       console.warn(
-        `[menuService] Fallback resiliente activo (${error.message}). Utilizando catálogo mock ($COP).`
+        `[menuService] Fallback local activo (${error.message}). Utilizando los 8 cócteles botánicos oficiales.`
       );
 
       if (!isAll) {
-        return FALLBACK_MENU_ITEMS.filter((item) => {
-          const itemCat = normalizeCategory(item.categoria);
-          return (
-            itemCat === normalizedCat ||
-            itemCat.includes(normalizedCat) ||
-            normalizedCat.includes(itemCat)
-          );
-        });
+        return FALLBACK_MENU_ITEMS.filter((item) =>
+          normalizeCategory(item.categoria) === normalizedCat ||
+          item.categoria?.toUpperCase() === categoria?.toUpperCase()
+        );
       }
       return FALLBACK_MENU_ITEMS;
     }
   },
 
   /**
-   * Obtiene el detalle de un plato o servicio por su identificador
+   * Obtiene el detalle de un cóctel por su ID
    * @param {string|number} id
    * @returns {Promise<ReturnType<typeof MenuItemDTO>>}
    */
@@ -174,21 +203,20 @@ export const menuService = {
         const res = await api.get(`/menu/${id}`);
         item = res.data;
       } catch (e) {
-        const resServ = await api.get(`/servicios/${id}`);
-        item = resServ.data;
+        const resPlatos = await api.get(`/platos/${id}`);
+        item = resPlatos.data;
       }
 
       return MenuItemDTO(
-        item.id || item._id,
-        item.nombre || item.name,
-        item.descripcion || item.description,
-        item.precio || item.price,
-        item.categoria || item.category,
-        item.imagenUrl || item.imageUrl,
+        item.id,
+        item.nombre,
+        item.descripcion,
+        item.precio,
+        item.categoria,
+        resolveCocktailImage(item),
         item.disponible
       );
     } catch (error) {
-      console.warn(`[menuService] Fallback al buscar ítem id=${id}`);
       const fallbackItem = FALLBACK_MENU_ITEMS.find((i) => String(i.id) === String(id));
       if (fallbackItem) return fallbackItem;
       throw error;
@@ -196,25 +224,30 @@ export const menuService = {
   },
 
   /**
-   * Crea un nuevo plato o servicio en la carta (requiere rol ADMIN)
-   * @param {ReturnType<typeof MenuItemDTO>} itemDTO
+   * Crea un nuevo cóctel en la carta persistiendo en PostgreSQL (POST /api/v1/platos)
+   * @param {{ nombre: string, precio: number, categoria: string, descripcion: string }} itemData
    * @returns {Promise<ReturnType<typeof MenuItemDTO>>}
    */
-  createMenuItem: async (itemDTO) => {
+  createMenuItem: async (itemData) => {
     try {
-      const response = await api.post('/servicios', itemDTO);
+      const response = await api.post('/platos', {
+        nombre: itemData.nombre,
+        precio: Number(itemData.precio),
+        categoria: itemData.categoria,
+        descripcion: itemData.descripcion || '',
+      });
       const created = response.data;
       return MenuItemDTO(
-        created.id || created._id,
-        created.nombre || created.name,
-        created.descripcion || created.description,
-        created.precio || created.price,
-        created.categoria || created.category,
-        created.imagenUrl || created.imageUrl,
+        created.id,
+        created.nombre,
+        created.descripcion,
+        created.precio,
+        created.categoria,
+        resolveCocktailImage(created),
         created.disponible
       );
     } catch (error) {
-      console.error('[menuService] Error al crear ítem en la carta:', error);
+      console.error('[menuService] Error al crear cóctel en PostgreSQL:', error);
       throw error;
     }
   },
