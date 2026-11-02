@@ -7,6 +7,8 @@ Cliente web oficial para **Blue Velvet Restaurant & Coctelería de Autor**, plat
 ## Link del despliegue en Vercel:
 https://bitacora-blue-velvet-front.vercel.app
 
+## Link de la demostración de las funcionalidades:
+https://youtu.be/EQQHvej-CyU
 ---
 
 ## Estructura del Proyecto (Arquitectura Nivel 2)
