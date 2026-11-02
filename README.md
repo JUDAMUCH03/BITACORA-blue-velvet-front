@@ -1,6 +1,11 @@
-# Blue Velvet Restaurant & Coctelería de Autor - Web Client
+# Blue Velvet Restaurant & Coctelería de Autor
 
-Cliente web oficial para **Blue Velvet Restaurant & Coctelería de Autor**, plataforma de alta cocina y mixología contemporánea desarrollada para el curso **DOSW**.
+Cliente web oficial para **Blue Velvet Restaurant & Coctelería de Autor**, plataforma de alta cocina y mixología contemporánea.
+
+---
+
+## Link del despliegue en Vercel:
+https://bitacora-blue-velvet-front.vercel.app
 
 ---
 
@@ -39,7 +44,7 @@ blue-velvet-front/
 
 ---
 
-## 🛠️ Comandos de Ejecución
+## Comandos de Ejecución
 
 1. **Instalar dependencias:**
    ```bash
