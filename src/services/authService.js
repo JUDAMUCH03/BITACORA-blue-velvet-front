@@ -19,7 +19,7 @@ export const authService = {
     };
 
     try {
-      const response = await api.post('/auth/login', payload, { timeout: 6000 });
+      const response = await api.post('/auth/login', payload, { timeout: 20000 });
       const data = response.data;
       const rawToken = data.token || data.accessToken || data.jwt;
       let userRole = data.rol || data.role;

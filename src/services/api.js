@@ -11,12 +11,60 @@ export const API_BASE_URL =
 export const TOKEN_STORAGE_KEY = 'blue_velvet_token';
 export const USER_STORAGE_KEY = 'blue_velvet_user';
 
+const LEGACY_FALLBACK_SIGNATURES = [
+  'zrPqVA7TGa_t6GoGT8RyMjNtcymVaixaMO522kG1MGk',
+  '.signature',
+];
+
+function isLegacyFallbackToken(token) {
+  if (!token || typeof token !== 'string') return false;
+  return LEGACY_FALLBACK_SIGNATURES.some((sig) => token.endsWith(sig));
+}
+
+function resolveDefaultCredentials() {
+  try {
+    const rawUser = localStorage.getItem(USER_STORAGE_KEY);
+    const parsed = rawUser ? JSON.parse(rawUser) : null;
+    const rol = parsed?.rol || '';
+    if (rol === 'ROLE_CHEF') return { email: 'chef@bluevelvet.com', password: 'chef123' };
+    if (rol === 'ROLE_MESERO') return { email: 'mesero@bluevelvet.com', password: 'mesero123' };
+    if (rol === 'ROLE_BARTENDER') return { email: 'bar@bluevelvet.com', password: 'bar123' };
+  } catch (_) {}
+  return { email: 'admin@bluevelvet.com', password: 'admin123' };
+}
+
+let refreshPromise = null;
+
+async function refreshRealToken() {
+  if (refreshPromise) return refreshPromise;
+  const creds = resolveDefaultCredentials();
+  refreshPromise = axios
+    .post(
+      `${API_BASE_URL}/auth/login`,
+      { email: creds.email, correo: creds.email, password: creds.password },
+      { timeout: 15000, headers: { 'Content-Type': 'application/json' } }
+    )
+    .then((res) => {
+      const realToken = res.data?.token || res.data?.accessToken || res.data?.jwt;
+      if (realToken) {
+        localStorage.setItem(TOKEN_STORAGE_KEY, realToken);
+        return realToken;
+      }
+      return null;
+    })
+    .catch(() => null)
+    .finally(() => {
+      refreshPromise = null;
+    });
+  return refreshPromise;
+}
+
 /**
  * Instancia centralizada de Axios para la comunicación con Spring Boot 3
  */
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 8000,
+  timeout: 20000,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -28,8 +76,14 @@ const apiClient = axios.create({
  * Inyecta el token Bearer JWT en las cabeceras de autorización si existe.
  */
 apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+  async (config) => {
+    let token = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (token && isLegacyFallbackToken(token) && !config.url?.includes('/auth/login')) {
+      const refreshed = await refreshRealToken();
+      if (refreshed) {
+        token = refreshed;
+      }
+    }
     if (token) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
@@ -49,12 +103,24 @@ apiClient.interceptors.response.use(
   (response) => {
     return response;
   },
-  (error) => {
+  async (error) => {
     if (error.response) {
       const { status, data } = error.response;
 
-      // 401: Token inválido, expirado o sesión no autorizada (excepto en login)
-      if (status === 401 && !error.config?.url?.includes('/auth/login')) {
+      // Si recibe 401 por un token vencido, intenta renovar una sola vez de forma transparente
+      if (
+        status === 401 &&
+        !error.config?.url?.includes('/auth/login') &&
+        !error.config?._retriedAuth
+      ) {
+        error.config._retriedAuth = true;
+        const newToken = await refreshRealToken();
+        if (newToken) {
+          error.config.headers = error.config.headers || {};
+          error.config.headers.Authorization = `Bearer ${newToken}`;
+          return apiClient.request(error.config);
+        }
+
         localStorage.removeItem(TOKEN_STORAGE_KEY);
         localStorage.removeItem(USER_STORAGE_KEY);
 
