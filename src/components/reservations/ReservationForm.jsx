@@ -289,7 +289,7 @@ export default function ReservationForm({ onSubmit, loading, error }) {
           className="w-full py-4 rounded-full font-bold text-velvet-900 bg-gradient-to-r from-velvet-gold via-velvet-gold-light to-velvet-gold shadow-gold-glow hover:scale-[1.01] active:scale-95 transition-all duration-300 flex items-center justify-center gap-2 text-base disabled:opacity-50"
         >
           {loading ? (
-            <span>Validando disponibilidad...</span>
+            <span>Conectando con la nube...</span>
           ) : (
             <>
               <span>Confirmar Reserva Inmediata</span>

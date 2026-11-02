@@ -176,7 +176,7 @@ export default function LoginPage() {
               {submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Iniciando sesión...</span>
+                  <span>Conectando con la nube...</span>
                 </>
               ) : (
                 <>

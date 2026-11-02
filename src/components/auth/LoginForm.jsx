@@ -171,7 +171,7 @@ export default function LoginForm() {
           className="w-full py-3.5 rounded-full font-bold text-velvet-900 bg-gradient-to-r from-velvet-gold via-velvet-gold-light to-velvet-gold shadow-gold-glow hover:scale-[1.01] active:scale-95 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {loading ? (
-            <span>Verificando autenticación...</span>
+            <span>Conectando con la nube...</span>
           ) : (
             <>
               <span>{isRegister ? 'Completar Registro' : 'Acceder con Bearer JWT'}</span>

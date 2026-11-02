@@ -458,7 +458,7 @@ export default function ModuloCatalogo() {
                   Cancelar formulario
                 </button>
                 <button type="submit" disabled={guardando} className="btn-primario text-xs disabled:opacity-60 disabled:cursor-wait">
-                  {guardando ? 'Guardando en PostgreSQL…' : 'Guardar en catálogo'}
+                  {guardando ? 'Conectando con la nube...' : 'Guardar en catálogo'}
                 </button>
               </div>
             </form>
