@@ -46,8 +46,14 @@ export const authService = {
           data = await attemptLogin();
         } catch (secondError) {
           console.error('[authService] Error en segundo intento de autenticación:', secondError);
+          const secondStatus = secondError.response?.status;
+          if (secondStatus === 503 || secondStatus === 504 || secondError.code === 'ECONNABORTED' || /timeout|cold start/i.test(secondError.message || '')) {
+            throw new Error('El servidor de Azure se está inicializando (Cold Start). Espera unos segundos y vuelve a presionar Iniciar Sesión.');
+          }
           throw secondError;
         }
+      } else if (status === 401 || status === 403) {
+        throw new Error('Credenciales inválidas. Verifica tu correo y contraseña.');
       } else {
         console.error('[authService] Error en autenticación contra Spring Boot:', firstError);
         throw firstError;
