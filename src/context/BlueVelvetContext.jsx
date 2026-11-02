@@ -654,6 +654,12 @@ export function BlueVelvetProvider({ children }) {
       precio: precioNum,
       categoria: nuevoPlato.categoria || CATEGORIAS_BEBIDA.COCTEL_AUTOR,
       descripcion: (nuevoPlato.descripcion?.trim() || 'Cóctel de autor Blue Velvet').slice(0, LIMITE_DESCRIPCION),
+      graduacionAlcoholica:
+        nuevoPlato.graduacionAlcoholica !== undefined &&
+        nuevoPlato.graduacionAlcoholica !== '' &&
+        nuevoPlato.graduacionAlcoholica !== null
+          ? Number(nuevoPlato.graduacionAlcoholica)
+          : (nuevoPlato.categoria === CATEGORIAS_BEBIDA.MOCKTAIL ? 0 : 25),
     };
 
     try {
