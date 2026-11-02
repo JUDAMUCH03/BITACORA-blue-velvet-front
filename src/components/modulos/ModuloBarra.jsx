@@ -31,7 +31,7 @@ const COLUMNAS_KDS = [
     colorBorde: 'border-ambar',
     colorTexto: 'text-ambar',
     colorFondo: 'bg-ambar/10',
-    descripcion: 'Preparación en curso · Inmutable (HTTP 422)',
+    descripcion: 'Preparación en curso · No admite cambios',
   },
   {
     id: ESTADOS_PEDIDO.LISTO,
@@ -220,7 +220,7 @@ export default function ModuloBarra() {
                         {esEnPreparacion && (
                           <div className="p-2.5 rounded-xl bg-ambar/10 border border-ambar/30 text-amber-200 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
                             <Lock className="w-3.5 h-3.5 text-ambar shrink-0" />
-                            <span>Bebida inmutable · En preparación · Código HTTP 422</span>
+                            <span>Bebida en preparación · No admite cambios</span>
                           </div>
                         )}
 

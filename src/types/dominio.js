@@ -35,7 +35,7 @@ export const ROLES_USUARIO = {
   ROLE_ADMIN: {
     id: 'ROLE_ADMIN',
     nombre: 'Administrador',
-    descripcion: 'Control total de cartas, comandas, mesas y auditoría',
+    descripcion: 'Control total de cartas, comandas, mesas, reservas y bitácora operativa',
   },
   ROLE_CHEF: {
     id: 'ROLE_CHEF',

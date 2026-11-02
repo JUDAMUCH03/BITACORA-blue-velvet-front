@@ -90,7 +90,7 @@ export default function LoginPage() {
 
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-velvet-800 border border-velvet-gold/30 text-xs font-semibold text-velvet-gold">
             <Key className="w-3.5 h-3.5" />
-            <span>Acceso Seguro Bearer JWT</span>
+            <span>Portal de Operaciones • Acceso Autorizado</span>
           </div>
 
           <h1 className="font-serif text-3xl sm:text-4xl font-bold text-white tracking-tight">
@@ -176,7 +176,7 @@ export default function LoginPage() {
               {submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Conectando con la nube...</span>
+                  <span>Verificando credenciales...</span>
                 </>
               ) : (
                 <>
@@ -190,7 +190,7 @@ export default function LoginPage() {
           {/* Autocompletado Rápido para Evaluadores DOSW */}
           <div className="pt-4 border-t border-white/10 space-y-2.5">
             <p className="text-[11px] text-center text-slate-400 font-medium">
-              Acceso rápido para evaluación DOSW:
+              Accesos de demostración:
             </p>
             <div className="flex gap-2">
               <button
@@ -217,10 +217,10 @@ export default function LoginPage() {
         <div className="flex items-center justify-center gap-6 text-xs text-slate-400">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-velvet-gold" />
-            <span>Encriptación Bearer JWT</span>
+            <span>Conexión cifrada</span>
           </div>
           <span className="text-slate-600">•</span>
-          <span>Spring Boot 3 Security</span>
+          <span>Credenciales de Personal</span>
         </div>
       </div>
     </div>

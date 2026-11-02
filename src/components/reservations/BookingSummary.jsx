@@ -22,7 +22,7 @@ import { Link } from 'react-router-dom';
 export default function BookingSummary({ booking, onReset }) {
   if (!booking) return null;
 
-  const id = booking.id || booking._id || 'BV-8492';
+  const id = booking.codigo || booking.id || booking._id || '';
   const fecha = booking.fecha || booking.reservationDate || '';
   const hora = booking.hora || booking.timeSlot || '';
   const comensales = booking.comensales || booking.guestCount || 1;

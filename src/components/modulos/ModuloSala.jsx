@@ -353,7 +353,7 @@ export default function ModuloSala({ onIrACarta, onIrALiquidacion }) {
                 className="w-full btn-primario gap-2 disabled:opacity-60 disabled:cursor-wait"
               >
                 <Send className="w-4 h-4" />
-                <span>{despachando ? 'Conectando con la nube...' : 'Enviar a barra'}</span>
+                <span>{despachando ? 'Enviando a barra...' : 'Enviar a barra'}</span>
               </button>
             )}
 

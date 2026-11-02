@@ -8,19 +8,30 @@ import {
   X,
   AlertCircle,
   Sparkles,
-  ToggleLeft,
-  ToggleRight,
   Lock,
   Trash2,
+  Loader2,
 } from 'lucide-react';
 import { useBlueVelvet } from '../../context/BlueVelvetContext';
 import { CATEGORIAS_BEBIDA, ROLES_USUARIO } from '../../types/dominio';
 import { formatCOP } from '../menu/MenuCard';
 
+/**
+ * Formatea un evento de la bitácora operativa para presentación al personal.
+ */
+function formatearMomento(evt) {
+  const bruto = evt.timestamp || evt.fecha;
+  if (!bruto) return '';
+  const fecha = new Date(bruto);
+  if (Number.isNaN(fecha.getTime())) return String(bruto);
+  return fecha.toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
+}
+
 export default function ModuloCatalogo() {
   const {
     platos,
     toggleDisponibilidadPlato,
+    platosPendientes,
     crearPlato,
     eliminarPlato,
     eventosAuditoria,
@@ -70,13 +81,13 @@ export default function ModuloCatalogo() {
       setNuevaDescripcion('');
       setMostrarModalCreacion(false);
     } else {
-      setErrorModal('El cóctel NO se guardó en PostgreSQL. Revisa el aviso en pantalla para ver el motivo devuelto por el backend.');
+      setErrorModal('El cóctel no pudo registrarse. Revisa el aviso en pantalla para conocer el motivo.');
     }
   };
 
   const handleEliminar = async (plato) => {
     const confirmacion = window.confirm(
-      `¿Confirmas que deseas eliminar permanentemente el cóctel "${plato.nombre}" del catálogo y de la base de datos PostgreSQL?`
+      `¿Confirmas que deseas retirar permanentemente el cóctel "${plato.nombre}" de la carta?`
     );
     if (!confirmacion) return;
     await eliminarPlato(plato.id);
@@ -89,15 +100,15 @@ export default function ModuloCatalogo() {
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-superficie-profunda border border-oro/30 text-oro text-[11px] font-bold uppercase tracking-[0.2em]">
             <Wine className="w-3.5 h-3.5" />
-            <span>Gestión de Carta & Trazabilidad NoSQL</span>
+            <span>Carta de Coctelería & Destilados de Autor</span>
           </div>
 
           <h1 className="font-serif text-3xl sm:text-4xl font-bold text-texto tracking-tight">
-            Catálogo Maestro y Auditoría
+            Catálogo Maestro y Bitácora
           </h1>
 
           <p className="text-texto-secundario text-xs sm:text-sm font-light">
-            Control de disponibilidad de recetas en tiempo real y registro cronológico inmutable de eventos.
+            Control de disponibilidad de recetas en tiempo real y bitácora cronológica de sucesos del servicio.
           </p>
         </div>
 
@@ -128,7 +139,7 @@ export default function ModuloCatalogo() {
       </div>
 
       {/* ================================================================= */}
-      {/* BARRA DE PERMISOS RBAC ACTIVA */}
+      {/* BARRA DE PERFIL ACTIVO */}
       {/* ================================================================= */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-[#0F172A] to-[#0A1020] border border-borde flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs">
         <div className="flex items-center gap-3">
@@ -137,7 +148,7 @@ export default function ModuloCatalogo() {
           </div>
           <div>
             <p className="font-bold text-texto">
-              Perfil Activo: <span className="text-champan">{ROLES_USUARIO[rolActivo]?.nombre}</span> ({rolActivo})
+              Perfil Activo: <span className="text-champan">{ROLES_USUARIO[rolActivo]?.nombre}</span>
             </p>
             <p className="text-[11px] text-texto-secundario">
               {ROLES_USUARIO[rolActivo]?.descripcion}
@@ -188,17 +199,22 @@ export default function ModuloCatalogo() {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {platos.map((plato) => {
+                  const pendiente = platosPendientes.includes(plato.id);
                   return (
                     <tr
                       key={plato.id}
-                      className="hover:bg-white/[0.02] transition-colors"
+                      className={`hover:bg-white/[0.02] transition-all duration-500 ${
+                        plato.disponible ? 'opacity-100' : 'opacity-60'
+                      } ${pendiente ? 'animate-pulse' : ''}`}
                     >
                       <td className="py-3.5 px-3">
                         <div className="flex items-center gap-3">
                           <img
                             src={plato.imagenUrl || 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80'}
                             alt={plato.nombre}
-                            className="w-9 h-9 rounded-lg object-cover border border-borde shrink-0"
+                            className={`w-9 h-9 rounded-lg object-cover border border-borde shrink-0 transition-all duration-500 ${
+                              plato.disponible ? 'scale-100' : 'grayscale scale-90'
+                            }`}
                           />
                           <div>
                             <p className="font-bold text-texto">{plato.nombre}</p>
@@ -221,38 +237,48 @@ export default function ModuloCatalogo() {
 
                       <td className="py-3.5 px-3 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          {plato.disponible ? (
-                            <span className="insignia-verde text-[9px] py-0.5">
-                              Disponible
-                            </span>
-                          ) : (
-                            <span className="insignia-carmesi text-[9px] py-0.5">
-                              Agotado en barra
-                            </span>
-                          )}
+                          <span
+                            className={`${
+                              plato.disponible ? 'insignia-verde' : 'insignia-carmesi'
+                            } text-[9px] py-0.5 transition-all duration-300`}
+                          >
+                            {plato.disponible ? 'Disponible' : 'Agotado'}
+                          </span>
 
-                          {/* Switch de Disponibilidad */}
+                          {/* Interruptor de Disponibilidad */}
                           <button
                             type="button"
-                            disabled={esMesero}
+                            role="switch"
+                            aria-checked={Boolean(plato.disponible)}
+                            disabled={esMesero || pendiente}
                             onClick={() => toggleDisponibilidadPlato(plato.id)}
-                            className={`p-1 transition-colors ${
+                            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-all duration-300 focus:outline-none ${
+                              plato.disponible
+                                ? 'bg-esmeralda/70 border-esmeralda/60'
+                                : 'bg-carmesi/60 border-carmesi/50'
+                            } ${
                               esMesero
                                 ? 'opacity-30 cursor-not-allowed'
-                                : 'hover:scale-110 active:scale-95'
+                                : pendiente
+                                ? 'cursor-wait scale-95'
+                                : 'hover:scale-105 active:scale-95'
                             }`}
                             title={
                               esMesero
-                                ? 'El rol Mesero no cuenta con permisos para mutar disponibilidad'
-                                : 'Alternar disponibilidad en tiempo real'
+                                ? 'El rol Mesero no cuenta con permisos para modificar la disponibilidad'
+                                : plato.disponible
+                                ? 'Marcar como agotado en barra'
+                                : 'Marcar como disponible'
                             }
-                            aria-label={`Alternar stock de ${plato.nombre}`}
+                            aria-label={`Alternar disponibilidad de ${plato.nombre}`}
                           >
-                            {plato.disponible ? (
-                              <ToggleRight className="w-6 h-6 text-esmeralda" />
-                            ) : (
-                              <ToggleLeft className="w-6 h-6 text-carmesi" />
-                            )}
+                            <span
+                              className={`inline-flex h-4 w-4 items-center justify-center rounded-full bg-white shadow transition-transform duration-300 ${
+                                plato.disponible ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            >
+                              {pendiente && <Loader2 className="w-3 h-3 animate-spin text-noche" />}
+                            </span>
                           </button>
                         </div>
                       </td>
@@ -263,8 +289,8 @@ export default function ModuloCatalogo() {
                             type="button"
                             onClick={() => handleEliminar(plato)}
                             className="p-1.5 rounded-lg text-texto-tenue hover:text-carmesi hover:bg-carmesi/10 transition-colors"
-                            title={`Eliminar permanentemente "${plato.nombre}" de la carta y PostgreSQL`}
-                            aria-label={`Eliminar ${plato.nombre}`}
+                            title={`Retirar "${plato.nombre}" de la carta`}
+                            aria-label={`Retirar ${plato.nombre}`}
                           >
                             <Trash2 className="w-4 h-4 text-carmesi/70 hover:text-carmesi" />
                           </button>
@@ -279,23 +305,23 @@ export default function ModuloCatalogo() {
         </div>
 
         {/* =============================================================== */}
-        {/* FEED DE AUDITORÍA EN VIVO (ESPEJO MONGODB eventos_restaurante) */}
+        {/* FEED DE LA BITÁCORA DE SUCESOS OPERATIVOS */}
         {/* =============================================================== */}
         <div className="p-6 rounded-3xl bg-[#0F172A] border border-borde space-y-4 shadow-xl">
           <div className="flex items-center justify-between pb-3 border-b border-borde">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-oro animate-pulse" />
               <h2 className="font-serif text-base font-bold text-texto">
-                Trazabilidad en Vivo
+                Bitácora de Sucesos Operativos
               </h2>
             </div>
             <span className="text-[10px] text-champan font-mono uppercase tracking-wider">
-              MongoDB Log
+              En vivo
             </span>
           </div>
 
           <p className="text-[11px] text-texto-secundario font-light">
-            Espejo de eventos operativos inmutables registrados durante el servicio nocturno.
+            Registro cronológico de los sucesos del servicio nocturno.
           </p>
 
           {/* Línea de Tiempo Cronológica Vertical */}
@@ -307,16 +333,16 @@ export default function ModuloCatalogo() {
 
                 <div className="flex items-center justify-between text-[10px]">
                   <span className="font-bold text-champan uppercase tracking-wider font-mono">
-                    {evt.tipoEvento}
+                    {String(evt.tipoEvento || evt.tipo || '').replace(/_/g, ' ')}
                   </span>
                   <span className="text-texto-tenue font-mono flex items-center gap-1">
                     <Clock className="w-3 h-3" />
-                    <span>{evt.fecha}</span>
+                    <span>{formatearMomento(evt)}</span>
                   </span>
                 </div>
 
                 <p className="text-texto font-medium leading-snug">
-                  {evt.detalles}
+                  {evt.detalle || evt.detalles || evt.descripcion}
                 </p>
 
                 <p className="text-[10px] text-texto-tenue">
@@ -392,10 +418,10 @@ export default function ModuloCatalogo() {
                     onChange={(e) => setNuevaCategoria(e.target.value)}
                     className="w-full bg-[#0D1525] border border-borde rounded-xl px-4 py-2.5 text-xs text-texto focus:outline-none focus:border-oro"
                   >
-                    <option value={CATEGORIAS_BEBIDA.COCTEL_AUTOR}>Firmas de Autor (COCTEL_AUTOR)</option>
-                    <option value={CATEGORIAS_BEBIDA.DESTILADO_PREMIUM}>Destilados Premium (DESTILADO_PREMIUM)</option>
-                    <option value={CATEGORIAS_BEBIDA.MOCKTAIL}>Mocktails 0.0% (MOCKTAIL)</option>
-                    <option value={CATEGORIAS_BEBIDA.BOTANICO}>Mixología Botánica (BOTANICO)</option>
+                    <option value={CATEGORIAS_BEBIDA.COCTEL_AUTOR}>Firmas de Autor</option>
+                    <option value={CATEGORIAS_BEBIDA.DESTILADO_PREMIUM}>Destilados Premium</option>
+                    <option value={CATEGORIAS_BEBIDA.MOCKTAIL}>Mocktails 0.0%</option>
+                    <option value={CATEGORIAS_BEBIDA.BOTANICO}>Mixología Botánica</option>
                   </select>
                 </div>
 
@@ -458,7 +484,7 @@ export default function ModuloCatalogo() {
                   Cancelar formulario
                 </button>
                 <button type="submit" disabled={guardando} className="btn-primario text-xs disabled:opacity-60 disabled:cursor-wait">
-                  {guardando ? 'Conectando con la nube...' : 'Guardar en catálogo'}
+                  {guardando ? 'Guardando en catálogo...' : 'Guardar en catálogo'}
                 </button>
               </div>
             </form>

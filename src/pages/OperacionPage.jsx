@@ -6,10 +6,11 @@ import ModuloSala from '../components/modulos/ModuloSala';
 import ModuloBarra from '../components/modulos/ModuloBarra';
 import ModuloLiquidacion from '../components/modulos/ModuloLiquidacion';
 import ModuloCatalogo from '../components/modulos/ModuloCatalogo';
+import ModuloReservas from '../components/modulos/ModuloReservas';
 
 /**
  * Vista Operativa Maestra de Blue Velvet — Coctelería de Autor
- * Conecta los 5 módulos del servicio nocturno con navegación sincronizada.
+ * Conecta los módulos del servicio nocturno con navegación sincronizada.
  */
 export default function OperacionPage({ moduloInicial = MODULOS_SISTEMA.CARTA }) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -60,6 +61,8 @@ export default function OperacionPage({ moduloInicial = MODULOS_SISTEMA.CARTA })
       )}
 
       {moduloActivo === MODULOS_SISTEMA.CATALOGO && <ModuloCatalogo />}
+
+      {moduloActivo === MODULOS_SISTEMA.RESERVAS && <ModuloReservas />}
     </OperacionLayout>
   );
 }

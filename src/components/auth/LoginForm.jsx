@@ -94,7 +94,7 @@ export default function LoginForm() {
         <p className="text-xs text-slate-300">
           {isRegister
             ? 'Disfruta de reservas prioritarias e invitaciones a catas privadas.'
-            : 'Introduce tus credenciales para gestionar reservas y perfil con Bearer JWT.'}
+            : 'Introduce tus credenciales de personal o de cliente para gestionar tus reservas y tu perfil.'}
         </p>
       </div>
 
@@ -171,10 +171,10 @@ export default function LoginForm() {
           className="w-full py-3.5 rounded-full font-bold text-velvet-900 bg-gradient-to-r from-velvet-gold via-velvet-gold-light to-velvet-gold shadow-gold-glow hover:scale-[1.01] active:scale-95 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {loading ? (
-            <span>Conectando con la nube...</span>
+            <span>Verificando credenciales...</span>
           ) : (
             <>
-              <span>{isRegister ? 'Completar Registro' : 'Acceder con Bearer JWT'}</span>
+              <span>{isRegister ? 'Completar Registro' : 'Ingresar al Portal'}</span>
               <ArrowRight className="w-4 h-4" />
             </>
           )}

@@ -1,7 +1,4 @@
 import api from './api';
-import { BookingResponseDTO } from '../dtos/bookingDTOs';
-
-const RESERVAS_STORAGE_KEY = 'blue_velvet_reservas';
 
 const DEFAULT_SLOTS = [
   '13:30',
@@ -15,166 +12,123 @@ const DEFAULT_SLOTS = [
   '21:30',
 ];
 
+const ESTADOS_RESERVA = {
+  PENDIENTE: 'PENDIENTE',
+  CONFIRMADA: 'CONFIRMADA',
+  CANCELADA: 'CANCELADA',
+};
+
 /**
- * Helper para persistencia local de reservas (Prospectos de Landing Page)
+ * Traduce un error HTTP en un mensaje claro para el comensal o el personal.
  */
-function getStoredBookings() {
-  try {
-    const raw = localStorage.getItem(RESERVAS_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    return [];
-  }
-}
+function describirErrorReserva(error, accion) {
+  const status = error?.response?.status ?? error?.status;
+  const mensajeServidor = error?.response?.data?.message;
 
-function saveStoredBooking(booking) {
-  try {
-    const current = getStoredBookings();
-    localStorage.setItem(RESERVAS_STORAGE_KEY, JSON.stringify([booking, ...current]));
-  } catch (e) {
-    console.warn('[bookingService] No se pudo guardar reserva en localStorage:', e);
+  if (!status) {
+    return `${accion}: no hay conexión con el servicio. Verifica tu red e inténtalo nuevamente.`;
   }
+  if (status === 401) return `${accion}: tu sesión expiró. Inicia sesión nuevamente.`;
+  if (status === 403) return `${accion}: tu perfil no tiene permisos para esta operación.`;
+  if (status === 400 || status === 422) return `${accion}: ${mensajeServidor || 'revisa los datos ingresados.'}`;
+  return `${accion}: el servicio no pudo completar la operación. Inténtalo nuevamente.`;
 }
 
 /**
- * Servicio de Gestión de Reservas y Disponibilidad de Mesas (DOSW)
- * NOTA DE INTEGRACIÓN: El backend en Azure actualmente no expone ReservaController.
- * Este servicio intenta la comunicación HTTP con la API REST y, de forma transparente,
- * almacena las reservas confirmadas en localStorage como captura de prospectos de la Landing Page.
+ * Normaliza una reserva del servidor al formato usado por la interfaz.
+ * El identificador siempre es el generado por la base de datos.
+ */
+export function mapReservaServidor(r) {
+  const id = r.id;
+  return {
+    id,
+    codigo: `BV-${String(id).padStart(4, '0')}`,
+    fecha: r.fecha || '',
+    hora: r.hora || '',
+    estado: r.estado || ESTADOS_RESERVA.PENDIENTE,
+    comensales: Number(r.numeroPersonas) || 1,
+    mesaNumero: r.mesaNumero ?? null,
+    seatingArea: r.zona || 'Salón Principal',
+    clienteNombre: r.nombreCliente || '',
+    clienteEmail: r.emailCliente || '',
+    clienteTelefono: r.telefono || '',
+    notas: r.notas || '',
+    creadoEn: r.creadoEn || null,
+  };
+}
+
+/**
+ * Servicio de Reservas de Mesa (Blue Velvet).
+ * Toda operación se refleja en la base de datos: si el servicio rechaza o no responde,
+ * el error se propaga y NUNCA se simula una reserva confirmada.
  */
 export const bookingService = {
   /**
-   * Consulta las franjas horarias disponibles para una fecha determinada
-   * @param {string} fecha - Formato YYYY-MM-DD
+   * Franjas horarias del servicio (horario fijo de la casa)
    * @returns {Promise<string[]>}
    */
-  getAvailableSlots: async (fecha) => {
-    try {
-      const response = await api.get('/turnos/disponibles', {
-        params: { fecha },
-      });
-      if (Array.isArray(response.data)) {
-        return response.data;
-      }
-      return DEFAULT_SLOTS;
-    } catch (error) {
-      return DEFAULT_SLOTS;
-    }
-  },
+  getAvailableSlots: async () => DEFAULT_SLOTS,
 
   /**
-   * Registra una nueva reserva en el sistema
-   * @param {ReturnType<import('../dtos/bookingDTOs').CreateBookingRequestDTO>} bookingDTO
-   * @returns {Promise<ReturnType<typeof BookingResponseDTO>>}
+   * Registra una nueva reserva (POST /reservas)
+   * @param {{ fecha: string, hora: string, comensales: number, notas?: string,
+   *           clienteNombre: string, clienteEmail: string, clienteTelefono?: string, seatingArea?: string }} bookingDTO
    */
   createBooking: async (bookingDTO) => {
-    const bookingCode = `BV-${Math.floor(1000 + Math.random() * 9000)}`;
-    const nuevaReserva = BookingResponseDTO(
-      bookingCode,
-      bookingDTO.fecha,
-      bookingDTO.hora,
-      'CONFIRMADA',
-      bookingDTO.comensales,
-      0,
-      bookingDTO.clienteNombre || 'Comensal Blue Velvet'
-    );
+    const payload = {
+      nombreCliente: bookingDTO.clienteNombre,
+      emailCliente: bookingDTO.clienteEmail,
+      telefono: bookingDTO.clienteTelefono || null,
+      fecha: bookingDTO.fecha,
+      hora: bookingDTO.hora,
+      numeroPersonas: Number(bookingDTO.comensales),
+      zona: bookingDTO.seatingArea || null,
+      notas: bookingDTO.notas || null,
+    };
 
     try {
-      // Intentar persistencia en endpoint REST si estuviera activo
-      const response = await api.post('/reservas', bookingDTO);
-      const data = response.data;
-      const confirmada = BookingResponseDTO(
-        data.id || data._id || bookingCode,
-        data.fecha || bookingDTO.fecha,
-        data.hora || bookingDTO.hora,
-        data.estado || 'CONFIRMADA',
-        data.comensales || bookingDTO.comensales,
-        data.total || 0,
-        data.clienteNombre || bookingDTO.clienteNombre || 'Comensal Blue Velvet'
-      );
-      saveStoredBooking(confirmada);
-      return confirmada;
-    } catch (error) {
-      // Si el backend no tiene implementado /reservas (404) o está desconectado,
-      // confirmar la reserva y persistirla localmente
-      saveStoredBooking(nuevaReserva);
-      return nuevaReserva;
-    }
-  },
-
-  /**
-   * Consulta las reservas del usuario autenticado
-   * @returns {Promise<Array<ReturnType<typeof BookingResponseDTO>>>}
-   */
-  getMyBookings: async () => {
-    try {
-      const response = await api.get('/reservas/mis-reservas');
-      const list = Array.isArray(response.data) ? response.data : [];
-      if (list.length > 0) {
-        return list.map((item) =>
-          BookingResponseDTO(
-            item.id || item._id,
-            item.fecha,
-            item.hora,
-            item.estado,
-            item.comensales,
-            item.total,
-            item.clienteNombre
-          )
-        );
+      const response = await api.post('/reservas', payload, { timeout: 25000 });
+      if (!response.data || response.data.id === undefined || response.data.id === null) {
+        throw new Error('Respuesta del servicio sin identificador de reserva');
       }
+      return mapReservaServidor(response.data);
     } catch (error) {
-      // Fallback a almacenamiento local
+      throw new Error(describirErrorReserva(error, 'No fue posible confirmar tu reserva'));
     }
-    return getStoredBookings();
   },
 
   /**
-   * Consulta global de todas las reservas registradas (rol ADMIN / Staff)
-   * @returns {Promise<Array<ReturnType<typeof BookingResponseDTO>>>}
+   * Lista todas las reservas (personal), ordenadas por fecha y hora descendente (GET /reservas)
+   * @returns {Promise<Array>}
    */
   getAllBookings: async () => {
     try {
-      const response = await api.get('/reservas');
-      const list = Array.isArray(response.data) ? response.data : [];
-      if (list.length > 0) {
-        return list.map((item) =>
-          BookingResponseDTO(
-            item.id || item._id,
-            item.fecha,
-            item.hora,
-            item.estado,
-            item.comensales,
-            item.total,
-            item.clienteNombre
-          )
-        );
-      }
+      const response = await api.get('/reservas', { timeout: 20000 });
+      return Array.isArray(response.data) ? response.data.map(mapReservaServidor) : [];
     } catch (error) {
-      // Fallback a almacenamiento local
+      throw new Error(describirErrorReserva(error, 'No se pudieron consultar las reservas'));
     }
-    return getStoredBookings();
+  },
+
+  /**
+   * Cambia el estado de una reserva (PATCH /reservas/{id}/estado)
+   * @param {number} reservaId
+   * @param {'PENDIENTE'|'CONFIRMADA'|'CANCELADA'} estado
+   */
+  updateBookingStatus: async (reservaId, estado) => {
+    try {
+      const response = await api.patch(`/reservas/${reservaId}/estado`, { estado }, { timeout: 20000 });
+      return mapReservaServidor(response.data);
+    } catch (error) {
+      throw new Error(describirErrorReserva(error, 'No se pudo actualizar la reserva'));
+    }
   },
 
   /**
    * Cancela una reserva existente
-   * @param {string|number} reservaId
-   * @returns {Promise<{ success: boolean, message: string }>}
    */
-  cancelBooking: async (reservaId) => {
-    try {
-      await api.delete(`/reservas/${reservaId}`);
-    } catch (error) {
-      // Eliminar de localStorage
-      const current = getStoredBookings();
-      const filtradas = current.filter((b) => String(b.id) !== String(reservaId));
-      localStorage.setItem(RESERVAS_STORAGE_KEY, JSON.stringify(filtradas));
-    }
-    return {
-      success: true,
-      message: 'Reserva cancelada exitosamente',
-    };
-  },
+  cancelBooking: async (reservaId) => bookingService.updateBookingStatus(reservaId, ESTADOS_RESERVA.CANCELADA),
 };
 
+export { ESTADOS_RESERVA };
 export default bookingService;

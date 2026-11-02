@@ -87,6 +87,11 @@ export default function AppRouter() {
             element={<OperacionPage moduloInicial={MODULOS_SISTEMA.LIQUIDACION} />}
           />
 
+          <Route
+            path="/operacion/reservas"
+            element={<OperacionPage moduloInicial={MODULOS_SISTEMA.RESERVAS} />}
+          />
+
           {/* Rutas directas operativas */}
           <Route
             path="/carta"

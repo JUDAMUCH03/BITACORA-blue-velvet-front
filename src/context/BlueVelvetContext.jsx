@@ -6,7 +6,6 @@ import {
   CATEGORIAS_BEBIDA,
   ESTADOS_PEDIDO,
   ESTADOS_MESA,
-  ROLES_USUARIO,
   DESTILADOS_BASE_CATALOGO,
   GUARNICIONES_BOTANICAS,
 } from '../types/dominio';
@@ -16,21 +15,52 @@ const BlueVelvetContext = createContext(null);
 const DEFAULT_COCKTAIL_IMAGE =
   'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80';
 
-const ESCRITURA_TIMEOUT_MS = 10000;
-const AUDITORIA_TIMEOUT_MS = 5000;
+// Las escrituras esperan la respuesta real del servidor (tolera un arranque lento del servicio).
+const ESCRITURA_TIMEOUT_MS = 25000;
+const LECTURA_TIMEOUT_MS = 15000;
+const AUDITORIA_TIMEOUT_MS = 6000;
 
-const STORAGE_KEYS = {
-  PLATOS: 'bv_platos_persisted_v2',
-  MESAS: 'bv_mesas_persisted_v2',
-  PEDIDOS: 'bv_pedidos_persisted_v2',
-};
+const LIMITE_NOMBRE = 100;
+const LIMITE_DESCRIPCION = 255;
 
-const LIMITE_NOMBRE = 100; // @Size(max = 100) en PlatoRequestDTO
-const LIMITE_DESCRIPCION = 255; // @Size(max = 255) en PlatoRequestDTO
+/**
+ * Traduce un error de Axios en un mensaje operativo claro para el personal.
+ * Nunca se confirma un guardado que no ocurrió.
+ */
+function describirErrorBackend(err, accion) {
+  const status = err?.response?.status ?? err?.status;
+  const mensajeServidor = err?.response?.data?.message;
+
+  if (!status) {
+    return `${accion}: no hay conexión con el servicio. Verifica tu red e inténtalo nuevamente.`;
+  }
+  if (status === 401) return `${accion}: tu sesión expiró. Inicia sesión nuevamente.`;
+  if (status === 403) return `${accion}: tu perfil no tiene permisos para esta operación.`;
+  if (status === 404) return `${accion}: el registro ya no existe.`;
+  if (status === 409) return `${accion}: ${mensajeServidor || 'ya existe un registro con ese nombre o está en uso.'}`;
+  if (status === 400 || status === 422) return `${accion}: ${mensajeServidor || 'revisa los datos ingresados.'}`;
+  return `${accion}: el servicio no pudo completar la operación. Inténtalo nuevamente.`;
+}
+
+/**
+ * Normaliza un plato recibido del servidor con los atributos de presentación de la UI.
+ * El ID siempre proviene de la base de datos.
+ */
+function enriquecerPlato(p, extra = {}) {
+  const sinAlcohol =
+    p.categoria === CATEGORIAS_BEBIDA.MOCKTAIL || p.categoria === CATEGORIAS_BEBIDA.BOTANICO;
+  return {
+    ...p,
+    imagenUrl: p.imagenUrl || extra.imagenUrl || COCKTAIL_IMAGE_MAP[p.id] || DEFAULT_COCKTAIL_IMAGE,
+    graduacionAlcoholica: p.graduacionAlcoholica ?? extra.graduacionAlcoholica ?? (sinAlcohol ? 0 : 25),
+    notasSensoriales: p.notasSensoriales || extra.notasSensoriales,
+    cristaleria: p.cristaleria || extra.cristaleria,
+    esAlcoholico: !sinAlcohol,
+  };
+}
 
 // =========================================================================
-// DATOS SEMILLA DE ALTA FIDELIDAD 100% SINCRONIZADOS CON POSTGRESQL AZURE
-// (8 Cócteles Oficiales de Autor sin alimentos, carnes ni postres)
+// DATOS DE RESPALDO DE LECTURA (solo se muestran si el servicio no responde)
 // =========================================================================
 
 const PLATOS_INICIALES = [
@@ -214,48 +244,21 @@ const AUDITORIA_INICIAL = [
   },
 ];
 
-function leerCacheLocal(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch (_) {}
-  return fallback;
-}
-
-function guardarCacheLocal(key, data) {
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch (_) {}
-}
-
 export function BlueVelvetProvider({ children }) {
-  // 1. Vinculación estricta con AuthContext (RBAC Criptográfico JWT)
+  // Vinculación con AuthContext (perfil del personal autenticado)
   const { user } = useAuth();
   const rolActivo = user?.rol || 'ROLE_CLIENTE';
 
-  const [platos, setPlatos] = useState(() => leerCacheLocal(STORAGE_KEYS.PLATOS, PLATOS_INICIALES));
-  const [mesas, setMesas] = useState(() => leerCacheLocal(STORAGE_KEYS.MESAS, MESAS_INICIALES));
-  const [pedidos, setPedidos] = useState(() => leerCacheLocal(STORAGE_KEYS.PEDIDOS, PEDIDOS_KDS_INICIALES));
+  const [platos, setPlatos] = useState(PLATOS_INICIALES);
+  const [mesas, setMesas] = useState(MESAS_INICIALES);
+  const [pedidos, setPedidos] = useState(PEDIDOS_KDS_INICIALES);
   const [eventosAuditoria, setEventosAuditoria] = useState(AUDITORIA_INICIAL);
   const [mesaSeleccionadaId, setMesaSeleccionadaId] = useState(2);
   const [alertaFlotante, setAlertaFlotante] = useState(null);
   const [comandasBorrador, setComandasBorrador] = useState({});
   const [cargandoInicial, setCargandoInicial] = useState(true);
-
-  useEffect(() => {
-    guardarCacheLocal(STORAGE_KEYS.PLATOS, platos);
-  }, [platos]);
-
-  useEffect(() => {
-    guardarCacheLocal(STORAGE_KEYS.MESAS, mesas);
-  }, [mesas]);
-
-  useEffect(() => {
-    guardarCacheLocal(STORAGE_KEYS.PEDIDOS, pedidos);
-  }, [pedidos]);
+  // IDs de platos con una petición de disponibilidad en vuelo (para la animación de la UI)
+  const [platosPendientes, setPlatosPendientes] = useState([]);
 
   /**
    * Notificación flotante de dominio
@@ -268,7 +271,7 @@ export function BlueVelvetProvider({ children }) {
   }, []);
 
   /**
-   * Consulta aislada de auditoría (GET /auditoria → MongoDB).
+   * Bitácora de sucesos operativos (lectura no crítica, se ignora si no está disponible)
    */
   const cargarAuditoriaSilenciosa = useCallback(async () => {
     try {
@@ -277,45 +280,34 @@ export function BlueVelvetProvider({ children }) {
         setEventosAuditoria(resAudit.data);
       }
     } catch (err) {
-      console.info('[BlueVelvetContext] Auditoría NoSQL no disponible (ignorado):', err?.message);
+      console.info('[BlueVelvetContext] Bitácora no disponible (ignorado):', err?.message);
     }
   }, []);
 
   /**
-   * Carga Inicial en Paralelo desde el Backend Spring Boot 3
+   * Carga inicial en paralelo. El catálogo proviene SIEMPRE de GET /platos (incluye agotados).
    */
   const cargarDatosIniciales = useCallback(async () => {
     setCargandoInicial(true);
     try {
-      const [resMenu, resMesas, resPedidos] = await Promise.allSettled([
-        api.get('/menu'),
-        api.get('/mesas'),
-        api.get('/pedidos'),
+      const [resPlatos, resMesas, resPedidos] = await Promise.allSettled([
+        api.get('/platos', { timeout: LECTURA_TIMEOUT_MS }),
+        api.get('/mesas', { timeout: LECTURA_TIMEOUT_MS }),
+        api.get('/pedidos', { timeout: LECTURA_TIMEOUT_MS }),
       ]);
 
-      let platosCargados = null;
-      if (resMenu.status === 'fulfilled' && Array.isArray(resMenu.value?.data) && resMenu.value.data.length > 0) {
-        platosCargados = resMenu.value.data;
+      if (resPlatos.status === 'fulfilled' && Array.isArray(resPlatos.value?.data)) {
+        setPlatos(resPlatos.value.data.map((p) => enriquecerPlato(p)));
       } else {
+        // Respaldo de lectura: carta pública
         try {
-          const resPlatos = await api.get('/platos');
-          if (Array.isArray(resPlatos.data) && resPlatos.data.length > 0) {
-            platosCargados = resPlatos.data;
+          const resMenu = await api.get('/menu', { timeout: LECTURA_TIMEOUT_MS });
+          if (Array.isArray(resMenu.data)) {
+            setPlatos(resMenu.data.map((p) => enriquecerPlato(p)));
           }
-        } catch (_) {}
-      }
-
-      if (platosCargados) {
-        const platosEnriquecidos = platosCargados.map((p) => ({
-          ...p,
-          imagenUrl: p.imagenUrl || COCKTAIL_IMAGE_MAP[p.id] || DEFAULT_COCKTAIL_IMAGE,
-          graduacionAlcoholica:
-            p.graduacionAlcoholica ??
-            (p.categoria === CATEGORIAS_BEBIDA.MOCKTAIL || p.categoria === CATEGORIAS_BEBIDA.BOTANICO ? 0 : 25),
-          esAlcoholico:
-            p.categoria !== CATEGORIAS_BEBIDA.MOCKTAIL && p.categoria !== CATEGORIAS_BEBIDA.BOTANICO,
-        }));
-        setPlatos(platosEnriquecidos);
+        } catch (_) {
+          /* se conserva el respaldo local de lectura */
+        }
       }
 
       if (resMesas.status === 'fulfilled' && Array.isArray(resMesas.value?.data) && resMesas.value.data.length > 0) {
@@ -330,7 +322,7 @@ export function BlueVelvetProvider({ children }) {
         cargarAuditoriaSilenciosa();
       }
     } catch (err) {
-      console.warn('[BlueVelvetContext] Conexión inicial al backend con advertencia:', err);
+      console.warn('[BlueVelvetContext] Carga inicial con advertencia:', err);
     } finally {
       setCargandoInicial(false);
     }
@@ -386,7 +378,7 @@ export function BlueVelvetProvider({ children }) {
   }, []);
 
   /**
-   * 1. DESPACHO DE COMANDAS (Sala ➔ Backend Spring Boot POST /pedidos)
+   * 1. DESPACHO DE COMANDAS (Sala ➔ POST /pedidos). Solo se confirma con respuesta real del servidor.
    */
   const enviarComandaABarra = useCallback(async (mesaId) => {
     const mesa = mesas.find((m) => m.id === mesaId);
@@ -437,52 +429,17 @@ export function BlueVelvetProvider({ children }) {
         return copia;
       });
 
-      dispararAlerta(`Comanda #${pedidoCreado.id} despachada a barra y persistida en BD.`, 'esmeralda');
+      dispararAlerta(`Comanda #${pedidoCreado.id} despachada a barra.`, 'esmeralda');
       return true;
     } catch (err) {
-      const status = err?.response?.status || err?.status;
-      if (status === 400 || status === 409 || status === 422) {
-        const mensajeError = err.response?.data?.message || err.message;
-        dispararAlerta(`Error al persistir comanda: ${mensajeError}`, 'carmesi');
-        return false;
-      }
-
-      const maxId = pedidos.reduce((max, p) => Math.max(max, Number(p.id) || 500), 502);
-      const nuevoId = maxId + 1;
-      const pedidoResiliente = {
-        id: nuevoId,
-        idMesa: mesa.id,
-        numeroMesa: mesa.numero,
-        estado: ESTADOS_PEDIDO.RECIBIDO,
-        timestamp: new Date().toISOString(),
-        items: itemsBorrador.map((it, idx) => ({
-          ...it,
-          id: nuevoId * 10 + idx + 1,
-          spiritModificationsCount: 0,
-        })),
-      };
-
-      setPedidos((prev) => [pedidoResiliente, ...prev]);
-      setMesas((prev) =>
-        prev.map((m) =>
-          m.id === mesaId
-            ? { ...m, estado: ESTADOS_MESA.OCUPADA, cuentaAbierta: true, comandaActivaId: nuevoId }
-            : m
-        )
-      );
-      setComandasBorrador((prev) => {
-        const copia = { ...prev };
-        delete copia[mesaId];
-        return copia;
-      });
-
-      dispararAlerta(`Comanda #${nuevoId} despachada a barra y persistida en BD.`, 'esmeralda');
-      return true;
+      console.error('[BlueVelvetContext] Error al registrar comanda:', err);
+      dispararAlerta(describirErrorBackend(err, 'No se pudo despachar la comanda'), 'carmesi');
+      return false;
     }
   }, [mesas, pedidos, comandasBorrador, dispararAlerta]);
 
   /**
-   * 2. AVANCE UNIDIRECCIONAL KDS (Barra ➔ Backend PATCH /pedidos/{id}/estado)
+   * 2. AVANCE UNIDIRECCIONAL DE COMANDA (Barra ➔ PATCH /pedidos/{id}/estado)
    */
   const avanzarEstadoPedido = useCallback(async (pedidoId) => {
     const ped = pedidos.find((p) => p.id === pedidoId);
@@ -502,33 +459,27 @@ export function BlueVelvetProvider({ children }) {
     try {
       const response = await api.patch(`/pedidos/${pedidoId}/estado`, { nuevoEstado: siguienteEstado }, { timeout: ESCRITURA_TIMEOUT_MS });
       setPedidos((prev) => prev.map((p) => (p.id === pedidoId ? response.data : p)));
-      dispararAlerta(`Comanda #${pedidoId} avanzó a ${siguienteEstado} (Persistido en KDS).`, 'esmeralda');
+      dispararAlerta(`Comanda #${pedidoId} avanzó a ${siguienteEstado}.`, 'esmeralda');
     } catch (err) {
-      setPedidos((prev) => prev.map((p) => (p.id === pedidoId ? { ...p, estado: siguienteEstado } : p)));
-      dispararAlerta(`Comanda #${pedidoId} avanzó a ${siguienteEstado} (Persistido en KDS).`, 'esmeralda');
+      console.error('[BlueVelvetContext] Error al avanzar estado de comanda:', err);
+      dispararAlerta(describirErrorBackend(err, `No se pudo actualizar la comanda #${pedidoId}`), 'carmesi');
     }
   }, [pedidos, dispararAlerta]);
 
   /**
-   * 3. MUTACIÓN DE DESTILADOS (Barra/Sala ➔ Backend PATCH /pedidos/{id}/items/{itemId}/destilado)
+   * 3. MUTACIÓN DE DESTILADOS (PATCH /pedidos/{id}/items/{itemId}/destilado)
    */
   const mutarDestiladoBase = useCallback(async (pedidoId, itemId, nuevoDestiladoId, motivo = 'Preferencia del cliente') => {
     const pedido = pedidos.find((p) => p.id === pedidoId);
     if (!pedido) return;
 
     if (pedido.estado === ESTADOS_PEDIDO.EN_PREPARACION) {
-      dispararAlerta('Operación denegada (HTTP 422): La comanda está en preparación y es estrictamente inmutable.', 'carmesi');
+      dispararAlerta('Operación denegada: la comanda está en preparación y ya no admite cambios.', 'carmesi');
       return;
     }
 
     if (pedido.estado !== ESTADOS_PEDIDO.RECIBIDO) {
       dispararAlerta('Solo es posible mutar el destilado mientras la comanda está en estado RECIBIDO.', 'carmesi');
-      return;
-    }
-
-    const itemTarget = pedido.items?.find((it) => it.id === itemId);
-    if (itemTarget && (itemTarget.spiritModificationsCount || 0) >= 1) {
-      dispararAlerta('Operación denegada (HTTP 422): Solo se permite 1 mutación de destilado por bebida.', 'carmesi');
       return;
     }
 
@@ -541,34 +492,10 @@ export function BlueVelvetProvider({ children }) {
         motivo: motivo || 'Preferencia del cliente',
       }, { timeout: ESCRITURA_TIMEOUT_MS });
       setPedidos((prev) => prev.map((p) => (p.id === pedidoId ? response.data : p)));
-      dispararAlerta(`Destilado mutado a ${destiladoObj.nombre} (Persistido en PostgreSQL / MongoDB).`, 'esmeralda');
+      dispararAlerta(`Destilado mutado a ${destiladoObj.nombre}.`, 'esmeralda');
     } catch (err) {
-      const status = err?.response?.status || err?.status;
-      if (status === 422 || status === 400) {
-        const mensajeError = err.response?.data?.message || err.message;
-        dispararAlerta(`Error al mutar destilado: ${mensajeError}`, 'carmesi');
-        return;
-      }
-
-      setPedidos((prev) =>
-        prev.map((p) => {
-          if (p.id !== pedidoId) return p;
-          return {
-            ...p,
-            items: p.items.map((it) =>
-              it.id === itemId
-                ? {
-                    ...it,
-                    spiritBrandId: destiladoObj.id,
-                    nombreDestilado: destiladoObj.nombre,
-                    spiritModificationsCount: (it.spiritModificationsCount || 0) + 1,
-                  }
-                : it
-            ),
-          };
-        })
-      );
-      dispararAlerta(`Destilado mutado a ${destiladoObj.nombre} (Persistido en PostgreSQL / MongoDB).`, 'esmeralda');
+      console.error('[BlueVelvetContext] Error al mutar destilado:', err);
+      dispararAlerta(describirErrorBackend(err, 'No se pudo cambiar el destilado'), 'carmesi');
     }
   }, [pedidos, dispararAlerta]);
 
@@ -580,27 +507,29 @@ export function BlueVelvetProvider({ children }) {
     if (!pedido) return;
 
     if (pedido.estado !== ESTADOS_PEDIDO.RECIBIDO) {
-      dispararAlerta('Solo se pueden cancelar pedidos en estado RECIBIDO (Invariante HTTP 422).', 'carmesi');
+      dispararAlerta('Solo se pueden cancelar comandas en estado RECIBIDO.', 'carmesi');
       return;
     }
 
     try {
       await api.patch(`/pedidos/${pedidoId}/estado`, { nuevoEstado: ESTADOS_PEDIDO.CANCELADO }, { timeout: ESCRITURA_TIMEOUT_MS });
-    } catch (_) {}
-
-    setPedidos((prev) => prev.filter((p) => p.id !== pedidoId));
-    setMesas((prev) =>
-      prev.map((m) =>
-        m.id === pedido.idMesa
-          ? { ...m, estado: ESTADOS_MESA.DISPONIBLE, cuentaAbierta: false, comandaActivaId: undefined }
-          : m
-      )
-    );
-    dispararAlerta(`Comanda #${pedidoId} cancelada en barra y mesa liberada.`, 'esmeralda');
+      setPedidos((prev) => prev.filter((p) => p.id !== pedidoId));
+      setMesas((prev) =>
+        prev.map((m) =>
+          m.id === pedido.idMesa
+            ? { ...m, estado: ESTADOS_MESA.DISPONIBLE, cuentaAbierta: false, comandaActivaId: undefined }
+            : m
+        )
+      );
+      dispararAlerta(`Comanda #${pedidoId} cancelada y mesa liberada.`, 'esmeralda');
+    } catch (err) {
+      console.error('[BlueVelvetContext] Error al cancelar comanda:', err);
+      dispararAlerta(describirErrorBackend(err, 'No se pudo cancelar la comanda'), 'carmesi');
+    }
   }, [pedidos, dispararAlerta]);
 
   /**
-   * 4. LIQUIDACIÓN Y CIERRE DE MESA (Backend POST /cuentas/{id}/cerrar)
+   * 4. LIQUIDACIÓN Y CIERRE DE MESA (POST /cuentas/{id}/cerrar)
    */
   const liquidarCuenta = useCallback(async (mesaId, porcentajePropina = 10, cuentaId = null) => {
     const mesa = mesas.find((m) => m.id === mesaId);
@@ -610,77 +539,102 @@ export function BlueVelvetProvider({ children }) {
 
     try {
       await api.post(`/cuentas/${idCuentaCerrar}/cerrar`, null, { timeout: ESCRITURA_TIMEOUT_MS });
-    } catch (_) {}
+      try {
+        const resMesas = await api.get('/mesas', { timeout: LECTURA_TIMEOUT_MS });
+        if (Array.isArray(resMesas.data)) {
+          setMesas(resMesas.data);
+        }
+      } catch (_) {
+        setMesas((prev) =>
+          prev.map((m) =>
+            m.id === mesaId
+              ? { ...m, estado: ESTADOS_MESA.DISPONIBLE, cuentaAbierta: false, comandaActivaId: undefined }
+              : m
+          )
+        );
+      }
 
-    setMesas((prev) =>
-      prev.map((m) =>
-        m.id === mesaId
-          ? { ...m, estado: ESTADOS_MESA.DISPONIBLE, cuentaAbierta: false, comandaActivaId: undefined }
-          : m
-      )
-    );
+      const pedidoActivo = pedidos.find((p) => p.idMesa === mesaId && p.estado !== ESTADOS_PEDIDO.CANCELADO);
+      if (pedidoActivo) {
+        setPedidos((prev) =>
+          prev.map((p) => (p.id === pedidoActivo.id ? { ...p, estado: ESTADOS_PEDIDO.ENTREGADO } : p))
+        );
+      }
 
-    const pedidoActivo = pedidos.find((p) => p.idMesa === mesaId && p.estado !== ESTADOS_PEDIDO.CANCELADO);
-    if (pedidoActivo) {
-      setPedidos((prev) =>
-        prev.map((p) => (p.id === pedidoActivo.id ? { ...p, estado: ESTADOS_PEDIDO.ENTREGADO } : p))
-      );
+      setComandasBorrador((prev) => {
+        const copia = { ...prev };
+        delete copia[mesaId];
+        return copia;
+      });
+
+      dispararAlerta(`Cuenta de la mesa ${mesa.numero} liquidada. Mesa liberada.`, 'esmeralda');
+      return {
+        exito: true,
+        mesaNumero: mesa.numero,
+        fecha: new Date().toLocaleString(),
+      };
+    } catch (err) {
+      console.error('[BlueVelvetContext] Error al liquidar cuenta:', err);
+      const mensajeError = describirErrorBackend(err, `No se pudo liquidar la cuenta de la mesa ${mesa.numero}`);
+      dispararAlerta(mensajeError, 'carmesi');
+      return { exito: false, error: mensajeError };
     }
-
-    setComandasBorrador((prev) => {
-      const copia = { ...prev };
-      delete copia[mesaId];
-      return copia;
-    });
-
-    dispararAlerta(`Cuenta Mesa ${mesa.numero} liquidada exitosamente. Mesa liberada en PostgreSQL.`, 'esmeralda');
-    return {
-      exito: true,
-      mesaNumero: mesa.numero,
-      fecha: new Date().toLocaleString(),
-    };
   }, [mesas, pedidos, dispararAlerta]);
 
   /**
-   * 5. ALTERNANCIA DE STOCK EN VIVO (Backend PATCH /platos/{id}/disponible)
+   * 5. DISPONIBILIDAD EN BARRA (PATCH /platos/{id}/disponible).
+   * Actualización optimista con reversión automática si el servidor rechaza el cambio.
    */
   const toggleDisponibilidadPlato = useCallback(async (platoId) => {
     if (rolActivo === 'ROLE_MESERO') {
-      dispararAlerta('Permiso denegado: El rol Mesero solo cuenta con permisos de lectura.', 'carmesi');
-      return;
+      dispararAlerta('Permiso denegado: el rol Mesero solo cuenta con permisos de lectura.', 'carmesi');
+      return false;
     }
 
     const plato = platos.find((p) => p.id === platoId);
-    if (!plato) return;
-    const nuevoEstado = !plato.disponible;
+    if (!plato || platosPendientes.includes(platoId)) return false;
+
+    const estadoAnterior = Boolean(plato.disponible);
+    const nuevoEstado = !estadoAnterior;
+
+    setPlatosPendientes((prev) => [...prev, platoId]);
+    setPlatos((prev) => prev.map((p) => (p.id === platoId ? { ...p, disponible: nuevoEstado } : p)));
 
     try {
-      const response = await api.patch(`/platos/${platoId}/disponible?disponible=${nuevoEstado}`, null, { timeout: ESCRITURA_TIMEOUT_MS });
-      setPlatos((prev) =>
-        prev.map((p) => (p.id === platoId ? { ...p, disponible: response.data?.disponible ?? nuevoEstado } : p))
+      const response = await api.patch(
+        `/platos/${platoId}/disponible`,
+        null,
+        { params: { disponible: nuevoEstado }, timeout: ESCRITURA_TIMEOUT_MS }
       );
-    } catch (_) {
-      setPlatos((prev) =>
-        prev.map((p) => (p.id === platoId ? { ...p, disponible: nuevoEstado } : p))
+      const confirmado = typeof response.data?.disponible === 'boolean' ? response.data.disponible : nuevoEstado;
+      setPlatos((prev) => prev.map((p) => (p.id === platoId ? { ...p, disponible: confirmado } : p)));
+      dispararAlerta(
+        `${plato.nombre} ahora está ${confirmado ? 'DISPONIBLE' : 'AGOTADO EN BARRA'}.`,
+        confirmado ? 'esmeralda' : 'ambar'
       );
+      return true;
+    } catch (err) {
+      console.error('[BlueVelvetContext] Error al cambiar disponibilidad:', err);
+      setPlatos((prev) => prev.map((p) => (p.id === platoId ? { ...p, disponible: estadoAnterior } : p)));
+      dispararAlerta(describirErrorBackend(err, `No se pudo cambiar la disponibilidad de ${plato.nombre}`), 'carmesi');
+      return false;
+    } finally {
+      setPlatosPendientes((prev) => prev.filter((id) => id !== platoId));
     }
-
-    dispararAlerta(`${plato.nombre} ahora está ${nuevoEstado ? 'DISPONIBLE' : 'AGOTADO EN BARRA'} (Persistido en BD).`, nuevoEstado ? 'esmeralda' : 'ambar');
-  }, [rolActivo, platos, dispararAlerta]);
+  }, [rolActivo, platos, platosPendientes, dispararAlerta]);
 
   /**
-   * 6. CREAR NUEVO CÓCTEL EN CATÁLOGO (Backend POST /platos)
+   * 6. CREAR NUEVO CÓCTEL (POST /platos).
+   * Solo se agrega a la carta con la respuesta real del servidor y su ID autoincremental.
    */
   const crearPlato = useCallback(async (nuevoPlato) => {
     const esAutorizado =
       !rolActivo ||
       rolActivo.includes('ADMIN') ||
-      rolActivo.includes('CHEF') ||
-      rolActivo === 'ROLE_ADMIN' ||
-      rolActivo === 'ROLE_CHEF';
+      rolActivo.includes('CHEF');
 
     if (!esAutorizado) {
-      dispararAlerta('Permiso denegado: Solo Administrador y Mixólogo Jefe pueden crear cócteles.', 'carmesi');
+      dispararAlerta('Permiso denegado: solo Administrador y Mixólogo Jefe pueden crear cócteles.', 'carmesi');
       return false;
     }
 
@@ -704,82 +658,59 @@ export function BlueVelvetProvider({ children }) {
 
     try {
       const response = await api.post('/platos', payload, { timeout: ESCRITURA_TIMEOUT_MS });
-      const platoPersistidoBackend = response.data;
+      const creado = response.data;
 
-      const platoPersistido = {
-        ...platoPersistidoBackend,
-        id: platoPersistidoBackend?.id || platos.reduce((max, p) => Math.max(max, Number(p.id) || 0), 8) + 1,
-        nombre: platoPersistidoBackend?.nombre || payload.nombre,
-        precio: platoPersistidoBackend?.precio || payload.precio,
-        categoria: platoPersistidoBackend?.categoria || payload.categoria,
-        descripcion: platoPersistidoBackend?.descripcion || payload.descripcion,
-        disponible: true,
-        graduacionAlcoholica: Number(nuevoPlato.graduacionAlcoholica) || 0,
-        notasSensoriales: nuevoPlato.notasSensoriales || ['Perfil botánico exclusivo'],
-        cristaleria: nuevoPlato.cristaleria || 'Copa sugerida de la casa',
-        esAlcoholico: payload.categoria !== CATEGORIAS_BEBIDA.MOCKTAIL && payload.categoria !== CATEGORIAS_BEBIDA.BOTANICO,
-        imagenUrl: nuevoPlato.imagenUrl || DEFAULT_COCKTAIL_IMAGE,
-      };
-
-      setPlatos((prev) => [platoPersistido, ...prev.filter((p) => p.id !== platoPersistido.id)]);
-      dispararAlerta(`Cóctel "${platoPersistido.nombre}" (ID ${platoPersistido.id}) creado y persistido en PostgreSQL.`, 'esmeralda');
-      return true;
-    } catch (err) {
-      const status = err?.response?.status || err?.status;
-      if (status === 400 || status === 409) {
-        const msg = err?.response?.data?.message || err?.message || 'Datos inválidos o cóctel duplicado.';
-        dispararAlerta(`Error al guardar cóctel: ${msg}`, 'carmesi');
-        return false;
+      if (!creado || creado.id === undefined || creado.id === null) {
+        throw new Error('Respuesta del servicio sin identificador');
       }
 
-      const nextId = platos.reduce((max, p) => Math.max(max, Number(p.id) || 0), 8) + 1;
-      const platoPersistido = {
-        id: nextId,
-        nombre: payload.nombre,
-        precio: payload.precio,
-        categoria: payload.categoria,
-        descripcion: payload.descripcion,
-        disponible: true,
-        graduacionAlcoholica: Number(nuevoPlato.graduacionAlcoholica) || 0,
-        notasSensoriales: nuevoPlato.notasSensoriales || ['Perfil botánico exclusivo'],
-        cristaleria: nuevoPlato.cristaleria || 'Copa sugerida de la casa',
-        esAlcoholico: payload.categoria !== CATEGORIAS_BEBIDA.MOCKTAIL && payload.categoria !== CATEGORIAS_BEBIDA.BOTANICO,
-        imagenUrl: nuevoPlato.imagenUrl || DEFAULT_COCKTAIL_IMAGE,
-      };
+      const platoNuevo = enriquecerPlato(
+        { ...creado, disponible: creado.disponible ?? true },
+        {
+          graduacionAlcoholica: Number(nuevoPlato.graduacionAlcoholica) || 0,
+          notasSensoriales: nuevoPlato.notasSensoriales || ['Perfil botánico exclusivo'],
+          cristaleria: nuevoPlato.cristaleria || 'Copa sugerida de la casa',
+          imagenUrl: nuevoPlato.imagenUrl,
+        }
+      );
 
-      setPlatos((prev) => [platoPersistido, ...prev]);
-      dispararAlerta(`Cóctel "${platoPersistido.nombre}" (ID ${platoPersistido.id}) creado y persistido en PostgreSQL.`, 'esmeralda');
+      setPlatos((prev) => [platoNuevo, ...prev.filter((p) => p.id !== platoNuevo.id)]);
+      dispararAlerta(`Cóctel "${platoNuevo.nombre}" registrado en el sistema.`, 'esmeralda');
       return true;
+    } catch (err) {
+      console.error('[BlueVelvetContext] Error al registrar cóctel:', err);
+      dispararAlerta(describirErrorBackend(err, 'No se pudo registrar el cóctel'), 'carmesi');
+      return false;
     }
-  }, [rolActivo, platos, dispararAlerta]);
+  }, [rolActivo, dispararAlerta]);
 
   /**
-   * 7. ELIMINAR CÓCTEL DEL CATÁLOGO (Backend DELETE /platos/{id})
+   * 7. ELIMINAR CÓCTEL DE LA CARTA (DELETE /platos/{id}). Solo se retira si el servidor lo confirma.
    */
   const eliminarPlato = useCallback(async (platoId) => {
-    const esAutorizado =
-      !rolActivo ||
-      rolActivo.includes('ADMIN') ||
-      rolActivo === 'ROLE_ADMIN';
+    const esAutorizado = !rolActivo || rolActivo.includes('ADMIN');
 
     if (!esAutorizado) {
-      dispararAlerta('Permiso denegado: Solo el Administrador puede eliminar cócteles.', 'carmesi');
+      dispararAlerta('Permiso denegado: solo el Administrador puede retirar cócteles.', 'carmesi');
       return false;
     }
 
     const platoAEliminar = platos.find((p) => p.id === platoId);
-    const nombrePlato = platoAEliminar?.nombre || `ID #${platoId}`;
+    const nombrePlato = platoAEliminar?.nombre || `#${platoId}`;
 
     try {
       await api.delete(`/platos/${platoId}`, { timeout: ESCRITURA_TIMEOUT_MS });
-    } catch (_) {}
-
-    setPlatos((prev) => prev.filter((p) => p.id !== platoId));
-    dispararAlerta(`Cóctel "${nombrePlato}" eliminado de la base de datos PostgreSQL.`, 'esmeralda');
-    return true;
+      setPlatos((prev) => prev.filter((p) => p.id !== platoId));
+      dispararAlerta(`Cóctel "${nombrePlato}" retirado de la carta.`, 'esmeralda');
+      return true;
+    } catch (err) {
+      console.error('[BlueVelvetContext] Error al retirar cóctel:', err);
+      dispararAlerta(describirErrorBackend(err, `No se pudo retirar "${nombrePlato}"`), 'carmesi');
+      return false;
+    }
   }, [rolActivo, platos, dispararAlerta]);
 
-  // Total de comandas activas en KDS (no entregadas)
+  // Total de comandas activas en barra (no entregadas)
   const comandasActivasKDSCount = pedidos.filter(
     (p) => p.estado !== ESTADOS_PEDIDO.ENTREGADO && p.estado !== ESTADOS_PEDIDO.CANCELADO
   ).length;
@@ -801,6 +732,7 @@ export function BlueVelvetProvider({ children }) {
     cancelarComanda,
     liquidarCuenta,
     toggleDisponibilidadPlato,
+    platosPendientes,
     crearPlato,
     eliminarPlato,
     comandasActivasKDSCount,

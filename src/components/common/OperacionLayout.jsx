@@ -11,6 +11,7 @@ import {
   LogOut,
   Shield,
   Sparkles,
+  CalendarCheck,
 } from 'lucide-react';
 import { useBlueVelvet } from '../../context/BlueVelvetContext';
 import { useAuth } from '../../context/AuthContext';
@@ -23,12 +24,13 @@ export const MODULOS_SISTEMA = {
   BARRA: 'BARRA',
   LIQUIDACION: 'LIQUIDACION',
   CATALOGO: 'CATALOGO',
+  RESERVAS: 'RESERVAS',
 };
 
 /**
  * Shell Operativo Principal de Blue Velvet — Coctelería de Autor
  * Implementa barra lateral fija en escritorio, navegación inferior en móvil,
- * cabecera translúcida con insignia RBAC legítima de solo lectura (JWT) y atmósfera nocturna.
+ * cabecera translúcida con identificación del personal y atmósfera nocturna.
  */
 export default function OperacionLayout({
   moduloActivo,
@@ -82,6 +84,12 @@ export default function OperacionLayout({
       icono: Wine,
       badge: null,
     },
+    {
+      id: MODULOS_SISTEMA.RESERVAS,
+      nombre: 'Reservas',
+      icono: CalendarCheck,
+      badge: null,
+    },
   ];
 
   const infoRolActual = ROLES_USUARIO[rolActivo] || ROLES_USUARIO.ROLE_ADMIN;
@@ -123,7 +131,7 @@ export default function OperacionLayout({
             </span>
           </div>
 
-          {/* Navegación de los 5 Módulos */}
+          {/* Navegación de los módulos */}
           <nav className="space-y-1.5" aria-label="Navegación principal del servicio">
             {itemsNavegacion.map((item) => {
               const Icono = item.icono;
@@ -234,7 +242,7 @@ export default function OperacionLayout({
             )}
           </button>
 
-          {/* Bloque Informativo de Sesión y Rol (Solo Lectura - JWT RBAC) */}
+          {/* Bloque Informativo de Sesión y Perfil del Personal (Solo Lectura) */}
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-superficie-profunda border border-borde">
               {/* Avatar con inicial */}
@@ -242,17 +250,13 @@ export default function OperacionLayout({
                 {(user?.nombre || user?.email || user?.correo || 'U').charAt(0).toUpperCase()}
               </div>
 
-              {/* Identidad y Rol Legítimo extraído del JWT */}
+              {/* Identidad y perfil del personal */}
               <div className="hidden sm:flex flex-col text-left">
                 <span className="text-xs font-semibold text-texto leading-none">
                   {user?.email || user?.correo || 'Usuario'}
                 </span>
                 <span className="text-[10px] text-champan font-mono mt-0.5 flex items-center gap-1.5">
                   <span>{infoRolActual.nombre}</span>
-                  <span className="text-texto-tenue">·</span>
-                  <span className="px-1.5 py-0.5 rounded bg-oro/15 border border-oro/30 text-oro font-bold text-[9px]">
-                    {rolActivo}
-                  </span>
                 </span>
               </div>
             </div>
@@ -305,7 +309,7 @@ export default function OperacionLayout({
       {/* NAVEGACIÓN INFERIOR FIJA EN MÓVIL Y TABLET (65px) */}
       {/* =================================================================== */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 h-[65px] bg-[#080D19]/98 border-t border-borde backdrop-blur-xl z-40 grid grid-cols-5 items-center px-1"
+        className="md:hidden fixed bottom-0 left-0 right-0 h-[65px] bg-[#080D19]/98 border-t border-borde backdrop-blur-xl z-40 grid grid-cols-6 items-center px-1"
         aria-label="Navegación inferior móvil"
       >
         {itemsNavegacion.map((item) => {
