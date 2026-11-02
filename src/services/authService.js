@@ -7,52 +7,82 @@ import { AuthResponseDTO } from '../dtos/authDTOs';
 export const authService = {
   /**
    * Autentica al usuario contra el backend REST (POST /api/v1/auth/login)
+   * Incluye reintento automático silencioso ante 503 o timeout por Cold Start de Azure.
    * @param {{ correo: string, password: string }} loginRequestDTO
    * @returns {Promise<{ token: string, rol: string, correo: string, nombre: string }>}
    */
   login: async (loginRequestDTO) => {
+    const emailValue = loginRequestDTO.email || loginRequestDTO.correo;
+    const payload = {
+      email: emailValue,
+      correo: emailValue,
+      password: loginRequestDTO.password,
+    };
+
+    const attemptLogin = async () => {
+      const response = await api.post('/auth/login', payload);
+      return response.data;
+    };
+
+    let data;
     try {
-      const emailValue = loginRequestDTO.email || loginRequestDTO.correo;
-      const response = await api.post('/auth/login', {
-        email: emailValue,
-        correo: emailValue,
-        password: loginRequestDTO.password,
-      });
+      data = await attemptLogin();
+    } catch (firstError) {
+      const status = firstError.response?.status;
+      const isColdStartOrTimeout =
+        status === 503 ||
+        status === 504 ||
+        firstError.code === 'ECONNABORTED' ||
+        firstError.isNetworkError ||
+        /timeout|cold start/i.test(firstError.message || '');
 
-      const data = response.data;
-      const rawToken = data.token || data.accessToken || data.jwt;
-      let userRole = data.rol || data.role;
-      let userEmail = data.correo || data.email || emailValue;
-
-      // Si el backend responde { token: "..." }, decodificar claims ("rol", "roles", "sub") del JWT
-      if (!userRole && rawToken && rawToken.includes('.')) {
+      if (isColdStartOrTimeout) {
+        console.info(
+          '[authService] Servidor en arranque en frío (Cold Start de Azure). Reintentando en 2.5 segundos...'
+        );
+        // Espera silenciosa de 2.5s antes del reintento
+        await new Promise((resolve) => setTimeout(resolve, 2500));
         try {
-          const payloadBase64 = rawToken.split('.')[1];
-          const decodedPayload = JSON.parse(atob(payloadBase64));
-          userRole = decodedPayload.rol || (Array.isArray(decodedPayload.roles) ? decodedPayload.roles[0] : null);
-          if (decodedPayload.sub) {
-            userEmail = decodedPayload.sub;
-          }
-        } catch (e) {
-          console.warn('[authService] No se pudo extraer claims del JWT:', e);
+          data = await attemptLogin();
+        } catch (secondError) {
+          console.error('[authService] Error en segundo intento de autenticación:', secondError);
+          throw secondError;
         }
+      } else {
+        console.error('[authService] Error en autenticación contra Spring Boot:', firstError);
+        throw firstError;
       }
-
-      const authData = AuthResponseDTO(
-        rawToken,
-        userRole || 'ROLE_CLIENTE',
-        userEmail,
-        data.nombre || data.name || userEmail.split('@')[0]
-      );
-
-      localStorage.setItem(TOKEN_STORAGE_KEY, authData.token);
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(authData));
-
-      return authData;
-    } catch (error) {
-      console.error('[authService] Error en autenticación contra Spring Boot:', error);
-      throw error;
     }
+
+    const rawToken = data.token || data.accessToken || data.jwt;
+    let userRole = data.rol || data.role;
+    let userEmail = data.correo || data.email || emailValue;
+
+    // Si el backend responde { token: "..." }, decodificar claims ("rol", "roles", "sub") del JWT
+    if (!userRole && rawToken && rawToken.includes('.')) {
+      try {
+        const payloadBase64 = rawToken.split('.')[1];
+        const decodedPayload = JSON.parse(atob(payloadBase64));
+        userRole = decodedPayload.rol || (Array.isArray(decodedPayload.roles) ? decodedPayload.roles[0] : null);
+        if (decodedPayload.sub) {
+          userEmail = decodedPayload.sub;
+        }
+      } catch (e) {
+        console.warn('[authService] No se pudo extraer claims del JWT:', e);
+      }
+    }
+
+    const authData = AuthResponseDTO(
+      rawToken,
+      userRole || 'ROLE_CLIENTE',
+      userEmail,
+      data.nombre || data.name || userEmail.split('@')[0]
+    );
+
+    localStorage.setItem(TOKEN_STORAGE_KEY, authData.token);
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(authData));
+
+    return authData;
   },
 
   /**
