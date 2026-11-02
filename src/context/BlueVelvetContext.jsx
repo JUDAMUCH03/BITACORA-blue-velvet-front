@@ -16,6 +16,36 @@ const BlueVelvetContext = createContext(null);
 const DEFAULT_COCKTAIL_IMAGE =
   'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80';
 
+// Timeouts HTTP:
+// - Escrituras: el backend registra auditoría en MongoDB dentro de la misma @Transactional; si MongoDB
+//   no responde, Spring tarda ~30s en fallar. Con 45s el navegador NO aborta la petición y recibimos
+//   la respuesta real del servidor (201 o el error que causó el rollback).
+// - Auditoría: lectura no crítica, se corta rápido.
+const ESCRITURA_TIMEOUT_MS = 45000;
+const AUDITORIA_TIMEOUT_MS = 8000;
+
+/**
+ * Traduce un error de Axios/Spring Boot en un mensaje operativo claro.
+ */
+function describirErrorBackend(err, accion) {
+  const status = err?.response?.status;
+  const mensajeServidor = err?.response?.data?.message;
+  if (err?.code === 'ECONNABORTED' || /timeout/i.test(err?.message || '')) {
+    return `${accion}: el servidor no respondió a tiempo. La transacción NO se confirmó en PostgreSQL.`;
+  }
+  if (status === 401) return `${accion}: sesión expirada o token inválido. Inicia sesión nuevamente.`;
+  if (status === 403) return `${accion}: tu rol no tiene permisos para esta operación.`;
+  if (status === 409) return `${accion}: ${mensajeServidor || 'ya existe un registro con ese nombre.'}`;
+  if (status === 400) return `${accion}: datos inválidos (${mensajeServidor || 'revisa el formulario'}).`;
+  if (status >= 500) {
+    return `${accion}: error interno del backend (HTTP ${status}). La transacción fue revertida y NO se guardó en PostgreSQL.`;
+  }
+  return `${accion}: ${mensajeServidor || err?.message || 'error desconocido.'}`;
+}
+
+const LIMITE_NOMBRE = 100; // @Size(max = 100) en PlatoRequestDTO
+const LIMITE_DESCRIPCION = 255; // @Size(max = 255) en PlatoRequestDTO
+
 // =========================================================================
 // DATOS SEMILLA DE ALTA FIDELIDAD 100% SINCRONIZADOS CON POSTGRESQL AZURE
 // (8 Cócteles Oficiales de Autor sin alimentos, carnes ni postres)
@@ -227,6 +257,21 @@ export function BlueVelvetProvider({ children }) {
   }, []);
 
   /**
+   * Consulta aislada de auditoría (GET /auditoria → MongoDB).
+   * try/catch propio, timeout de 8s y sin alertas: si MongoDB no está disponible, se ignora.
+   */
+  const cargarAuditoriaSilenciosa = useCallback(async () => {
+    try {
+      const resAudit = await api.get('/auditoria', { timeout: AUDITORIA_TIMEOUT_MS });
+      if (Array.isArray(resAudit.data) && resAudit.data.length > 0) {
+        setEventosAuditoria(resAudit.data);
+      }
+    } catch (err) {
+      console.info('[BlueVelvetContext] Auditoría NoSQL no disponible (ignorado):', err?.message);
+    }
+  }, []);
+
+  /**
    * Carga Inicial en Paralelo desde el Backend Spring Boot 3
    */
   const cargarDatosIniciales = useCallback(async () => {
@@ -272,21 +317,17 @@ export function BlueVelvetProvider({ children }) {
         setPedidos(resPedidos.value.data);
       }
 
-      // Si es rol ADMIN, consultar eventos de auditoría en MongoDB
+      // Auditoría NoSQL (MongoDB) totalmente desacoplada: fire-and-forget, timeout corto y silenciosa.
+      // Nunca bloquea la carga inicial ni ninguna transacción PostgreSQL (p. ej. POST /platos).
       if (rolActivo === 'ROLE_ADMIN') {
-        try {
-          const resAudit = await api.get('/auditoria');
-          if (Array.isArray(resAudit.data) && resAudit.data.length > 0) {
-            setEventosAuditoria(resAudit.data);
-          }
-        } catch (_) {}
+        cargarAuditoriaSilenciosa();
       }
     } catch (err) {
       console.warn('[BlueVelvetContext] Conexión inicial al backend con advertencia:', err);
     } finally {
       setCargandoInicial(false);
     }
-  }, [rolActivo]);
+  }, [rolActivo, cargarAuditoriaSilenciosa]);
 
   useEffect(() => {
     cargarDatosIniciales();
@@ -373,7 +414,7 @@ export function BlueVelvetProvider({ children }) {
     };
 
     try {
-      const response = await api.post('/pedidos', payload);
+      const response = await api.post('/pedidos', payload, { timeout: ESCRITURA_TIMEOUT_MS });
       const pedidoCreado = response.data;
 
       setPedidos((prev) => [pedidoCreado, ...prev]);
@@ -420,7 +461,7 @@ export function BlueVelvetProvider({ children }) {
     }
 
     try {
-      const response = await api.patch(`/pedidos/${pedidoId}/estado`, { nuevoEstado: siguienteEstado });
+      const response = await api.patch(`/pedidos/${pedidoId}/estado`, { nuevoEstado: siguienteEstado }, { timeout: ESCRITURA_TIMEOUT_MS });
       setPedidos((prev) => prev.map((p) => (p.id === pedidoId ? response.data : p)));
       dispararAlerta(`Comanda #${pedidoId} avanzó a ${siguienteEstado} (Persistido en KDS).`, 'esmeralda');
     } catch (err) {
@@ -454,7 +495,7 @@ export function BlueVelvetProvider({ children }) {
       const response = await api.patch(`/pedidos/${pedidoId}/items/${itemId}/destilado`, {
         nuevoSpiritBrandId: Number(nuevoDestiladoId),
         motivo: motivo || 'Preferencia del cliente',
-      });
+      }, { timeout: ESCRITURA_TIMEOUT_MS });
       setPedidos((prev) => prev.map((p) => (p.id === pedidoId ? response.data : p)));
       dispararAlerta(`Destilado mutado a ${destiladoObj.nombre} (Persistido en PostgreSQL / MongoDB).`, 'esmeralda');
     } catch (err) {
@@ -477,7 +518,7 @@ export function BlueVelvetProvider({ children }) {
     }
 
     try {
-      await api.patch(`/pedidos/${pedidoId}/estado`, { nuevoEstado: ESTADOS_PEDIDO.CANCELADO });
+      await api.patch(`/pedidos/${pedidoId}/estado`, { nuevoEstado: ESTADOS_PEDIDO.CANCELADO }, { timeout: ESCRITURA_TIMEOUT_MS });
       setPedidos((prev) => prev.filter((p) => p.id !== pedidoId));
       setMesas((prev) =>
         prev.map((m) =>
@@ -504,7 +545,7 @@ export function BlueVelvetProvider({ children }) {
     const idCuentaCerrar = cuentaId || mesa.comandaActivaId || mesaId;
 
     try {
-      await api.post(`/cuentas/${idCuentaCerrar}/cerrar`);
+      await api.post(`/cuentas/${idCuentaCerrar}/cerrar`, null, { timeout: ESCRITURA_TIMEOUT_MS });
       try {
         const resMesas = await api.get('/mesas');
         if (Array.isArray(resMesas.data)) {
@@ -561,7 +602,7 @@ export function BlueVelvetProvider({ children }) {
     const nuevoEstado = !plato.disponible;
 
     try {
-      const response = await api.patch(`/platos/${platoId}/disponible?disponible=${nuevoEstado}`);
+      const response = await api.patch(`/platos/${platoId}/disponible?disponible=${nuevoEstado}`, null, { timeout: ESCRITURA_TIMEOUT_MS });
       setPlatos((prev) =>
         prev.map((p) => (p.id === platoId ? { ...p, disponible: response.data.disponible } : p))
       );
@@ -602,15 +643,17 @@ export function BlueVelvetProvider({ children }) {
       return false;
     }
 
+    // Contrato exacto de PlatoRequestDTO (Spring Boot): nombre, precio (Double), categoria (String del enum CategoriaBebida), descripcion
     const payload = {
-      nombre: nuevoPlato.nombre.trim(),
+      nombre: nuevoPlato.nombre.trim().slice(0, LIMITE_NOMBRE),
       precio: precioNum,
       categoria: nuevoPlato.categoria || CATEGORIAS_BEBIDA.COCTEL_AUTOR,
-      descripcion: nuevoPlato.descripcion?.trim() || 'Cóctel de autor Blue Velvet',
+      descripcion: (nuevoPlato.descripcion?.trim() || 'Cóctel de autor Blue Velvet').slice(0, LIMITE_DESCRIPCION),
     };
 
     try {
-      const response = await api.post('/platos', payload);
+      // POST /api/v1/platos (baseURL '/api/v1' + '/platos'), con Authorization: Bearer inyectado por el interceptor
+      const response = await api.post('/platos', payload, { timeout: ESCRITURA_TIMEOUT_MS });
       const platoPersistidoBackend = response.data;
 
       // Sincronización inmediata con PostgreSQL (GET /platos)
@@ -650,12 +693,11 @@ export function BlueVelvetProvider({ children }) {
         setPlatos((prev) => [platoPersistido, ...prev]);
       }
 
-      dispararAlerta(`Cóctel "${platoPersistidoBackend?.nombre || nuevoPlato.nombre}" creado y persistido en la base de datos PostgreSQL.`, 'esmeralda');
+      dispararAlerta(`Cóctel "${platoPersistidoBackend?.nombre || nuevoPlato.nombre}" (ID ${platoPersistidoBackend?.id}) creado y persistido en PostgreSQL.`, 'esmeralda');
       return true;
     } catch (err) {
       console.error('[BlueVelvetContext] Error persistiendo plato en backend:', err);
-      const mensajeError = err.response?.data?.message || err.message || 'Error al persistir el cóctel en la base de datos PostgreSQL.';
-      dispararAlerta(`Error al guardar cóctel: ${mensajeError}`, 'carmesi');
+      dispararAlerta(describirErrorBackend(err, 'Error al guardar cóctel'), 'carmesi');
       return false;
     }
   }, [rolActivo, dispararAlerta]);
@@ -679,14 +721,13 @@ export function BlueVelvetProvider({ children }) {
     const nombrePlato = platoAEliminar?.nombre || `ID #${platoId}`;
 
     try {
-      await api.delete(`/platos/${platoId}`);
+      await api.delete(`/platos/${platoId}`, { timeout: ESCRITURA_TIMEOUT_MS });
       setPlatos((prev) => prev.filter((p) => p.id !== platoId));
       dispararAlerta(`Cóctel "${nombrePlato}" eliminado de la base de datos PostgreSQL.`, 'esmeralda');
       return true;
     } catch (err) {
       console.error('[BlueVelvetContext] Error eliminando plato en backend:', err);
-      const mensajeError = err.response?.data?.message || err.message || 'No se pudo eliminar el cóctel en el servidor.';
-      dispararAlerta(`Error al eliminar cóctel: ${mensajeError}`, 'carmesi');
+      dispararAlerta(describirErrorBackend(err, 'Error al eliminar cóctel'), 'carmesi');
       return false;
     }
   }, [rolActivo, platos, dispararAlerta]);

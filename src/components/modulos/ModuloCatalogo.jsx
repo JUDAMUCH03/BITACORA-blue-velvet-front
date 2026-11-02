@@ -34,6 +34,7 @@ export default function ModuloCatalogo() {
   const [nuevaDescripcion, setNuevaDescripcion] = useState('');
   const [nuevaGraduacion, setNuevaGraduacion] = useState('25');
   const [errorModal, setErrorModal] = useState('');
+  const [guardando, setGuardando] = useState(false);
 
   const esMesero = rolActivo === 'ROLE_MESERO';
   const puedeCrear =
@@ -45,6 +46,7 @@ export default function ModuloCatalogo() {
 
   const handleCrearSubmit = async (e) => {
     e.preventDefault();
+    if (guardando) return; // evita doble envío mientras la petición está en vuelo
     setErrorModal('');
 
     if (!nuevoNombre.trim()) {
@@ -52,19 +54,23 @@ export default function ModuloCatalogo() {
       return;
     }
 
+    setGuardando(true);
+
     const exito = await crearPlato({
       nombre: nuevoNombre,
       categoria: nuevaCategoria,
       precio: nuevoPrecio,
       descripcion: nuevaDescripcion,
       graduacionAlcoholica: nuevaGraduacion,
-    });
+    }).finally(() => setGuardando(false));
 
     if (exito) {
       setNuevoNombre('');
       setNuevoPrecio('');
       setNuevaDescripcion('');
       setMostrarModalCreacion(false);
+    } else {
+      setErrorModal('El cóctel NO se guardó en PostgreSQL. Revisa el aviso en pantalla para ver el motivo devuelto por el backend.');
     }
   };
 
@@ -366,6 +372,8 @@ export default function ModuloCatalogo() {
                 <input
                   type="text"
                   required
+                  minLength={2}
+                  maxLength={100}
                   value={nuevoNombre}
                   onChange={(e) => setNuevoNombre(e.target.value)}
                   placeholder="Ej: Velvet Eclipse Smoked"
@@ -432,6 +440,7 @@ export default function ModuloCatalogo() {
                 <textarea
                   rows="3"
                   required
+                  maxLength={255}
                   value={nuevaDescripcion}
                   onChange={(e) => setNuevaDescripcion(e.target.value)}
                   placeholder="Notas de corteza de canela ahumada, reducción de moras silvestres y final persistente en boca..."
@@ -448,8 +457,8 @@ export default function ModuloCatalogo() {
                 >
                   Cancelar formulario
                 </button>
-                <button type="submit" className="btn-primario text-xs">
-                  Guardar en catálogo
+                <button type="submit" disabled={guardando} className="btn-primario text-xs disabled:opacity-60 disabled:cursor-wait">
+                  {guardando ? 'Guardando en PostgreSQL…' : 'Guardar en catálogo'}
                 </button>
               </div>
             </form>
