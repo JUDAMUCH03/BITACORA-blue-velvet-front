@@ -29,18 +29,25 @@ const AUDITORIA_TIMEOUT_MS = 8000;
  */
 function describirErrorBackend(err, accion) {
   const status = err?.response?.status;
-  const mensajeServidor = err?.response?.data?.message;
-  if (err?.code === 'ECONNABORTED' || /timeout/i.test(err?.message || '')) {
-    return `${accion}: el servidor no respondió a tiempo. La transacción NO se confirmó en PostgreSQL.`;
+  const mensajeServidor = err?.response?.data?.message || err?.message;
+
+  if (
+    status === 503 ||
+    status === 504 ||
+    err?.code === 'ECONNABORTED' ||
+    /timeout/i.test(err?.message || '') ||
+    err?.message?.includes('Cold Start')
+  ) {
+    return `${accion}: El servidor en la nube se está inicializando (Cold Start de Azure). Por favor, espera 10 segundos y reintenta la operación.`;
   }
   if (status === 401) return `${accion}: sesión expirada o token inválido. Inicia sesión nuevamente.`;
   if (status === 403) return `${accion}: tu rol no tiene permisos para esta operación.`;
   if (status === 409) return `${accion}: ${mensajeServidor || 'ya existe un registro con ese nombre.'}`;
   if (status === 400) return `${accion}: datos inválidos (${mensajeServidor || 'revisa el formulario'}).`;
   if (status >= 500) {
-    return `${accion}: error interno del backend (HTTP ${status}). La transacción fue revertida y NO se guardó en PostgreSQL.`;
+    return `${accion}: error interno del backend (HTTP ${status}). ${mensajeServidor || 'La transacción no pudo completarse.'}`;
   }
-  return `${accion}: ${mensajeServidor || err?.message || 'error desconocido.'}`;
+  return `${accion}: ${mensajeServidor || 'error desconocido.'}`;
 }
 
 const LIMITE_NOMBRE = 100; // @Size(max = 100) en PlatoRequestDTO

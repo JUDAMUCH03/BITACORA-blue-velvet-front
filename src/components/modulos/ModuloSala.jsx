@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Users,
   Send,
@@ -23,6 +23,18 @@ export default function ModuloSala({ onIrACarta, onIrALiquidacion }) {
     removerItemDeComanda,
     enviarComandaABarra,
   } = useBlueVelvet();
+
+  const [despachando, setDespachando] = useState(false);
+
+  const handleEnviarABarra = async () => {
+    if (despachando) return;
+    setDespachando(true);
+    try {
+      await enviarComandaABarra(mesaActiva.id);
+    } finally {
+      setDespachando(false);
+    }
+  };
 
   const mesaActiva = mesas.find((m) => m.id === mesaSeleccionadaId) || mesas[0];
 
@@ -336,11 +348,12 @@ export default function ModuloSala({ onIrACarta, onIrALiquidacion }) {
             {itemsBorrador.length > 0 && (
               <button
                 type="button"
-                onClick={() => enviarComandaABarra(mesaActiva.id)}
-                className="w-full btn-primario gap-2"
+                onClick={handleEnviarABarra}
+                disabled={despachando}
+                className="w-full btn-primario gap-2 disabled:opacity-60 disabled:cursor-wait"
               >
                 <Send className="w-4 h-4" />
-                <span>Enviar a barra</span>
+                <span>{despachando ? 'Conectando con la nube...' : 'Enviar a barra'}</span>
               </button>
             )}
 

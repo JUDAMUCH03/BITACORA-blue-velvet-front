@@ -9,15 +9,19 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 export const TOKEN_STORAGE_KEY = 'blue_velvet_token';
 export const USER_STORAGE_KEY = 'blue_velvet_user';
 
+export const COLD_START_MESSAGE =
+  'El servidor en la nube se está inicializando (Cold Start de Azure). Por favor, espera 10 segundos y reintenta la operación.';
+
 /**
  * Instancia centralizada de Axios para la comunicación con Spring Boot 3
+ * Timeout global extendido a 30.000 ms (30 s) para soportar el Cold Start en Azure B1.
  */
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 15000,
+  timeout: 30000,
 });
 
 /**
@@ -40,15 +44,33 @@ apiClient.interceptors.request.use(
 
 /**
  * Interceptor de Respuestas (Response Interceptor)
- * Manejo centralizado de 401 (desautorizado) y propagación estricta de errores HTTP.
+ * Manejo centralizado de 401, detección de Cold Start (503 / timeout) y normalización de errores.
  */
 apiClient.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
+    // 1. Detección específica de Cold Start de Azure o Timeout en Vercel
+    const status = error.response?.status;
+    const isColdStart =
+      status === 503 ||
+      status === 504 ||
+      error.code === 'ECONNABORTED' ||
+      /timeout/i.test(error.message || '') ||
+      error.message?.includes('Network Error');
+
+    if (isColdStart) {
+      error.message = COLD_START_MESSAGE;
+      if (error.response?.data && typeof error.response.data === 'object') {
+        error.response.data.message = COLD_START_MESSAGE;
+      }
+      return Promise.reject(error);
+    }
+
+    // 2. Manejo de respuestas con código de error HTTP del servidor
     if (error.response) {
-      const { status, data } = error.response;
+      const { data } = error.response;
 
       // 401: Token inválido, expirado o sesión no autorizada
       if (status === 401) {
@@ -60,7 +82,7 @@ apiClient.interceptors.response.use(
         }
       }
 
-      // Normalizar mensaje de error manteniendo la estructura de error
+      // Normalizar mensaje de error manteniendo la estructura
       const errorMessage =
         data?.message ||
         data?.error ||
@@ -69,10 +91,8 @@ apiClient.interceptors.response.use(
       error.message = errorMessage;
       return Promise.reject(error);
     } else if (error.request) {
-      // Petición realizada pero sin respuesta (timeout o falla de red)
-      const networkError = new Error(
-        'No se pudo establecer conexión con el backend de Blue Velvet o se agotó el tiempo de espera.'
-      );
+      // Petición enviada pero sin respuesta del servidor
+      const networkError = new Error(COLD_START_MESSAGE);
       networkError.isNetworkError = true;
       return Promise.reject(networkError);
     }
